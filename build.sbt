@@ -12,7 +12,7 @@ lazy val gradleCaches = file(System.getProperty("user.home")) / ".gradle" / "cac
 lazy val forgeSources = Def.setting { gradleCaches / "minecraft" / "net" / "minecraftforge" / "forge" / srcJarVersionSignature.value }
 unmanagedJars in Compile ++= Seq(
 	forgeSources.value / ("forgeSrc-" + srcJarVersionSignature.value + ".jar"),
-	baseDirectory.value / ".." / "build" / "tmp" / "deobfuscateJar" / "deobfed.jar"
+	baseDirectory.value / "build" / "tmp" / "deobfuscateJar" / "deobfed.jar"
 )
 libraryDependencies ++= Seq(
 	"org.apache.logging.log4j" % "log4j-api" % "2.0-beta9",
@@ -43,11 +43,21 @@ resolvers += "minecraft" at "https://libraries.minecraft.net/"
 
 scalacOptions ++= Seq("-deprecation", "-encoding", "UTF8")
 
-lazy val runClient = taskKey[Unit]("Run Minecraft as client")
+/*lazy val runClient = taskKey[Unit]("Run Minecraft as client")
 runClient in Compile := {
 	(compile in Compile).value
 	System.out.println("Running Client...")
-}
+}*/
+
+import java.io.File
+
+fork := true
+envVars := Map(
+	"fml.ignoreInvalidMinecraftCertificates" -> "true",
+	"net.minecraftforge.gradle.GradleStart.srgDir" -> (new File("@@SRGDIR@@")).getCanonicalPath()
+)
+mainClass in Compile := Some("net.minecraft.launchwrapper.Launch")
+run in Compile <<= Defaults.runTask(fullClasspath in Compile, mainClass in (Compile, run), runner in (Compile, run))
 
 /// Custom Settings ///
 lazy val minecraftVersion = settingKey[String]("Target Minecraft Version")
