@@ -36,7 +36,8 @@ libraryDependencies ++= Seq(
 	"com.paulscode" % "codecwav" % "20101023",
 	"java3d" % "vecmath" % "1.3.1",
 	"net.minecraft" % "launchwrapper" % "1.12",
-	"net.sf.trove4j" % "trove4j" % "3.0.3"
+	"net.sf.trove4j" % "trove4j" % "3.0.3",
+	"net.minecraftforge.gradle" % "ForgeGradle" % "1.2-SNAPSHOT"
 )
 resolvers += "forge" at "http://files.minecraftforge.net/maven"
 resolvers += "minecraft" at "https://libraries.minecraft.net/"
