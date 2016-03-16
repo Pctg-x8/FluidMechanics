@@ -1,0 +1,8 @@
+# Creative Tabs
+itemGroup.tabFluidMechanics=Fluid Mechanics
+
+# Tile names
+tile.assemblyTable_part.name=Assembly Table(Part)
+
+# Item names
+item.assemblyTable_caller.name=Assembly Table
