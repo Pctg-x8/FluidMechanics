@@ -1,7 +1,7 @@
 package com.cterm2.mcfm1710
 
 import cpw.mods.fml.common.Mod
-import cpw.mods.fml.common.Mod._
+import cpw.mods.fml.common.Mod.EventHandler
 import cpw.mods.fml.common.event._
 
 @Mod(modid=FMEntry.ID, name=FMEntry.Name, version=FMEntry.Version, modLanguage="scala")
