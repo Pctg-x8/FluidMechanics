@@ -12,4 +12,4 @@ Minecraft Industrial with Fluids.
 - Please ready decompiled Minecraft mod development files yourself 
 before using sbt.  
 `% ./gradlew setupDecompWorkspace`
-- `runClient` task can use to build/test the mod.
+- `run` task can use to build/test the mod(instead of gradle's `runClient`).
