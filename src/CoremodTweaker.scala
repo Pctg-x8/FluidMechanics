@@ -1,11 +1,11 @@
 package net.minecraftforge.gradle.tweakers
 
 import java.io.File
-import java.lang.reflect.{Constructor, Field}
+import java.lang.reflect.{Constructor, Field, AccessibleObject}
 import java.util.{List, Map}
 
 import net.minecraft.launchwrapper.{ITweaker, Launch, LaunchClassLoader}
-import net.minecraftforge.gradle.GradleForgeHacks
+import net.minecraftforge.gradle.GradleStartCommon
 
 import org.apache.logging.log4j.{Level, LogManager, Logger}
 
@@ -13,20 +13,22 @@ import org.apache.logging.log4j.{Level, LogManager, Logger}
 object CoremodTweaker
 {
 	protected val LOGGER = LogManager.getLogger("GradleStart")
-	protected val COREMOD_CLASS = "net.minecraftforge.fml.relauncher.CoreModManager"
+	protected val COREMOD_CLASS = "fml.relauncher.CoreModManager"
 	protected val TWEAKER_SORT_FIELD = "tweakSorting"
 }
 class CoremodTweaker extends ITweaker
 {
+	import CoremodTweaker._
+	
 	def injectIntoClassLoader(classLoader: LaunchClassLoader) =
 	{
 		try
 		{
-			var coreModList = Class.forName("net.minecraftforge.fml.relauncher.CoreModManager", true, classLoader).getDeclaredField("loadPlugins")
+			var coreModList = GradleStartCommon.getFmlClass("fml.relauncher.CoreModManager", classLoader).getDeclaredField("loadPlugins")
 			coreModList.setAccessible(true)
 			
 			// grab constructor
-			val clazz = Class.forName("net.minecraftforge.fml.relauncher.CoreModManager$FMLPluginWrapper", true, classLoader).asInstanceOf[Class[ITweaker]]
+			val clazz = GradleStartCommon.getFmlClass("fml.relauncher.CoreModManager$FMLPluginWrapper", classLoader).asInstanceOf[Class[ITweaker]]
 			val construct = clazz.getConstructors()(0).asInstanceOf[Constructor[ITweaker]]
 			construct.setAccessible(true)
 			
@@ -35,12 +37,12 @@ class CoremodTweaker extends ITweaker
 			val fileField = fields(3)
 			val listField = fields(2)
 			
-			Field.setAccessible(clazz.getConstructors(), true)
-			Field.setAccessible(fields, true)
+			AccessibleObject.setAccessible(clazz.getConstructors().asInstanceOf[Array[AccessibleObject]], true)
+			AccessibleObject.setAccessible(fields.asInstanceOf[Array[AccessibleObject]], true)
 			
 			val oldList = coreModList.get(null).asInstanceOf[List[ITweaker]]
 			
-			for(i <- 0 to oldList.size())
+			for(i <- 0 to oldList.size() - 1)
 			{
 				val tweaker = oldList.get(i)
 				
@@ -48,18 +50,18 @@ class CoremodTweaker extends ITweaker
 				{
 					val coreMod = pluginField.get(tweaker)
 					val oldFile = fileField.get(tweaker)
-					val newFile = GradleForgeHacks.coreMap.get(coreMod.getClass().getCanonicalName())
+					val newFile = GradleStartCommon.coreMap.get(coreMod.getClass().getCanonicalName())
 					
 					LOGGER.info("Injecting location in coremod {}", coreMod.getClass().getCanonicalName())
 					
 					if(newFile != null && oldFile != null)
 					{
 						// build new tweaker
-						oldList.set(i, construct.newInstance(new Array[Object]( 
+						oldList.set(i, construct.newInstance(Array[AnyRef](
 							fields(0).get(tweaker).asInstanceOf[String],	// name
 							coreMod,										// coremod
 							newFile,										// location
-							fields(4).getInt(tweaker),						// sort index?
+							fields(4).getInt(tweaker).asInstanceOf[AnyRef],	// sort index?
 							listField.get(tweaker).asInstanceOf[List[String]].toArray(new Array[String](0))
 						)))
 					}
@@ -77,11 +79,12 @@ class CoremodTweaker extends ITweaker
 		
 		// inject the additional AT tweaker
 		val atTweaker = "net.minecraftforge.gradle.tweakers.AccessTransformerTweaker";
-		Launch.blackboard.get("TweakClass").asInstanceOf[List[String]].add(atTweaker);
+		val tweakclass = Launch.blackboard.get("TweakClasses").asInstanceOf[List[String]]
+		tweakclass.add(atTweaker);
 		
 		try
 		{
-			val f = Class.forName(COREMOD_CLASS, true, classLoader).getDeclaredField(TWEAKER_SORT_FIELD)
+			val f = GradleStartCommon.getFmlClass(COREMOD_CLASS, classLoader).getDeclaredField(TWEAKER_SORT_FIELD)
 			f.setAccessible(true)
 			f.get(null).asInstanceOf[Map[String, Integer]].put(atTweaker, Integer.valueOf(1001))
 		}

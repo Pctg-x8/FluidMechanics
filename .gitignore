@@ -7,3 +7,5 @@ target/
 bin/
 build/
 *.log
+eclipse/
+logs/

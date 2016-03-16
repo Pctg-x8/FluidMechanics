@@ -15,7 +15,7 @@ object FMEntry
 	@EventHandler
 	def init(e: FMLInitializationEvent) =
 	{
-	
+		
 	}
 	@EventHandler
 	def postInit(e: FMLPostInitializationEvent) =
