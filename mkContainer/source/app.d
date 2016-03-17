@@ -2,6 +2,7 @@ import std.stdio;
 import imageformats;
 import std.algorithm, std.range, std.typecons, std.conv;
 import std.experimental.ndslice;
+import noise;
 
 void main(string[] args)
 {
@@ -16,11 +17,11 @@ void main(string[] args)
 
 	void placeSlot(int x, int y, int w, int h)
 	{
-		pixels[y .. y + h, x .. x + w, 0 .. $] *= 0.875f;
-		pixels[y - 1, x - 1 .. x + w + 1, 0 .. $] *= 0.6875f;
-		pixels[y .. y + h + 1, x - 1, 0 .. $] *= 0.6875f;
-		pixels[y + h, x - 1 .. x + w + 1, 0 .. $] *= 1.125f;
-		pixels[y - 1 .. y + h, x + w, 0 .. $] *= 1.125f;
+		pixels[y .. y + h, x .. x + w, 0 .. $] = 0.75f * 0.875f;
+		pixels[y - 1, x - 1 .. x + w + 1, 0 .. $] = 0.75f * 0.6875f;
+		pixels[y .. y + h + 1, x - 1, 0 .. $] = 0.75f * 0.6875f;
+		pixels[y + h, x - 1 .. x + w + 1, 0 .. $] = 0.75f * 1.125f;
+		pixels[y - 1 .. y + h, x + w, 0 .. $] = 0.75f * 1.125f;
 	}
 	immutable void delegate(const string[])[string] instructionProcessors =
 	[
@@ -43,6 +44,11 @@ void main(string[] args)
 			// vertical shadowing
 			pixels[0 .. h - 2, w - 1, 0 .. $] *= 0.6875f;
 			pixels[1 .. h - 2, w - 2, 0 .. $] *= 0.6875f;
+			// effect
+			foreach(x; 0 .. w) foreach(y; 0 .. h)
+			{
+				pixels[y, x, 0 .. $] *= noise.turbulence(x, y, 4) * 0.09375 + 0.90625;
+			}
 		},
 		"slot": (const string[] args)
 		{
