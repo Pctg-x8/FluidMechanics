@@ -1,0 +1,28 @@
+# Sample mkContainer input(this line is commit)
+
+surface 252, 170
+
+# crafting grid
+offset 8, 22
+# slotMatrix startX, startY, w, h, countX, countY, stepX, stepY
+slotMatrix 00, 00, 16, 16, 3, 3, 18, 18
+arrow 60, 18
+# result
+slot 86, 14, 24, 24
+
+# assembly grid
+offset 140, 18
+slot 32, 22, 16, 16
+slot 32, 00, 16, 16
+slot 32, 44, 16, 16
+slot 00, 22, 16, 16
+arrow 54, 22
+# result
+slot 80, 18, 24, 24
+
+# player slot
+offset 45, 92
+slotMatrix 00, 00, 16, 16, 9, 3, 18, 18
+slotMatrix 00, 56, 16, 16, 9, 1, 18, 18
+
+output ../src/main/resources/assets/mcfm1710/textures/guiBase/asmTable.png

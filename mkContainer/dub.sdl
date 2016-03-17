@@ -1,0 +1,6 @@
+name "mkContainer"
+description "Fluid Mechanics container backimage factory."
+copyright "Copyright © 2016, S.Percentage"
+authors "S.Percentage"
+
+dependency "imageformats" version="~>5.2.0"

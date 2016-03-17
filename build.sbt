@@ -1,7 +1,7 @@
 name := "mcfm1710"
 version := "1.0"
 organization := "com.cterm2"
-scalaVersion := "2.11.8"
+scalaVersion := "2.11.7"
 minecraftVersion := "1.7.10"
 forgeVersion := "10.13.4.1614"
 buildName := "FluidMechanics-mc1710-1341614"
@@ -34,12 +34,15 @@ libraryDependencies ++= Seq(
 	"java3d" % "vecmath" % "1.3.1",
 	"net.minecraft" % "launchwrapper" % "1.12",
 	"net.sf.trove4j" % "trove4j" % "3.0.3",
-	"lzma" % "lzma" % "0.0.1"
+	"lzma" % "lzma" % "0.0.1",
+	"com.google.code.findbugs" % "jsr305" % "1.3.+",
+	"org.scalactic" %% "scalactic" % "2.2.6",
+	"org.scalatest" %% "scalatest" % "2.2.6" % "test"
 )
 resolvers += "forge" at "http://files.minecraftforge.net/maven"
 resolvers += "minecraft" at "https://libraries.minecraft.net/"
 
-scalacOptions ++= Seq("-deprecation", "-encoding", "UTF8", "-target:jvm-1.7")
+scalacOptions ++= Seq("-deprecation", "-encoding", "UTF8", "-feature", "-language:implicitConversions")
 
 import java.io.File
 

@@ -6,3 +6,6 @@ tile.assemblyTable_part.name=Assembly Table(Part)
 
 # Item names
 item.assemblyTable_caller.name=Assembly Table
+
+# Container labels
+container.assembling=Assembling

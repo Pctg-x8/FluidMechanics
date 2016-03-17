@@ -9,3 +9,5 @@ build/
 *.log
 eclipse/
 logs/
+project/project/
+project/target/

@@ -20,7 +20,7 @@ import com.mojang.authlib.yggdrasil.{YggdrasilAuthenticationService, YggdrasilUs
 // companion
 object GradleStart
 {
-	private lazy val GSON = 
+	private val GSON = 
 	{
 		val builder = new GsonBuilder()
 		builder.enableComplexMapKeySerialization()
@@ -28,10 +28,12 @@ object GradleStart
 		builder.create()
 	}
 	
+	// hack natives and launch
 	def main(args: Array[String]): Unit =
 	{
 		// hack natives
 		hackNatives()
+		
 		// launch
 		(new GradleStart()).launch(args)
 	}
@@ -58,14 +60,14 @@ object GradleStart
 // avoiding compiler bug: SI-2034
 object AssetIndex
 {
-	class AssetEntry { var hash: String = "" }
+	class AssetEntry { var hash: String = _ }
 }
 class AssetIndex
 {
 	import AssetIndex._
 	
-	var virtual: Boolean = false
-	var objects: Map[String, AssetEntry] = null
+	var virtual: Boolean = _
+	var objects: Map[String, AssetEntry] = _
 }
 
 class GradleStart extends GradleStartCommon
