@@ -12,6 +12,7 @@ final class ContainerAssemblyTable(val worldObj: World, val tile: TEAssemblyTabl
 	val craftMatrix = new InventoryCrafting(this, 3, 3)
 	val craftResult = new InventoryCraftResult()
 	for(i <- 0 until 9) craftMatrix.setInventorySlotContents(i, tile.getStackInSlot(i))
+	val asmResult = new InventoryAssembleResult()
 
 	// initialize slots
 	initCraftingSlots(); initAssemblySlots(); initPlayerSlots()
@@ -47,7 +48,7 @@ final class ContainerAssemblyTable(val worldObj: World, val tile: TEAssemblyTabl
 				}
 			}
 
-			val containerSlotCount = 14
+			val containerSlotCount = 15
 			if(0 until containerSlotCount contains slotIndex)
 			{
 				// tile slot -> player slot
@@ -97,6 +98,7 @@ final class ContainerAssemblyTable(val worldObj: World, val tile: TEAssemblyTabl
 		this.addSlotToContainer(new Slot(tile, AssemblySlotIndices.TopCasing.index + 9, coreLeft, coreTop - 22))
 		this.addSlotToContainer(new Slot(tile, AssemblySlotIndices.BottomCasing.index + 9, coreLeft, coreTop + 22))
 		this.addSlotToContainer(new Slot(tile, AssemblySlotIndices.Attachment.index + 9, coreLeft - 32, coreTop))
+		this.addSlotToContainer(new SlotAssembleOutput(invPlayer.player, this.asmResult, 0, coreLeft + 48 + 4, coreTop))
 	}
 	// Setup slots for inventory of player
 	private def initPlayerSlots() =
@@ -105,4 +107,69 @@ final class ContainerAssemblyTable(val worldObj: World, val tile: TEAssemblyTabl
 		for(i <- 0 until 3; j <- 0 until 9) this.addSlotToContainer(new Slot(invPlayer, 9 + j + i * 9, playerLeft + j * 18, playerTop + i * 18))
 		for(j <- 0 until 9) this.addSlotToContainer(new Slot(invPlayer, j, playerLeft + j * 18, playerTop + 3 * 18 + 2))
 	}
+}
+
+// Slot for Assembling Result
+final class SlotAssembleOutput(val player: EntityPlayer, val source: IInventory, val index: Int, val x: Int, val y: Int)
+	extends Slot(source, index, x, y)
+{
+	// player for achievements
+	// Internal Counter
+	private var amountAssembled: Int = 0
+
+	// Slot Configurations //
+	// No items are valid(Output only)
+	override def isItemValid(stack: ItemStack) = false
+
+	// Slot Interactions //
+	// Decrease stack size
+	override def decrStackSize(amount: Int) =
+	{
+		import java.lang.Math.min
+
+		if(this.getHasStack) this.amountAssembled += min(amount, this.getStack.stackSize)
+		super.decrStackSize(amount)
+	}
+	// Called when picked up from slot(stub)
+	override def onPickupFromSlot(player: EntityPlayer, stack: ItemStack) = ???
+}
+
+// Inventory for Assemblying Result
+final class InventoryAssembleResult extends IInventory
+{
+	private var stack: Option[ItemStack] = None
+
+	// Inventory Configurations //
+	// Size of inventory
+	override val getSizeInventory = 1
+	// Name of inventory
+	override val getInventoryName = "asmResult"
+	// Custom names cannot have
+	override val hasCustomInventoryName = false
+	// Stack limit of inventory
+	override val getInventoryStackLimit = 64
+	// Useable by player
+	override def isUseableByPlayer(player: EntityPlayer) = true
+	// Any items are valid
+	override def isItemValidForSlot(index: Int, stack: ItemStack) = true
+
+	// Inventory Interactions //
+	// Gets itemStack in slot
+	override def getStackInSlot(index: Int) = this.stack.orNull
+	// Gets itemStack in slot on closing
+	override def getStackInSlotOnClosing(index: Int) = this.stack.map(x =>
+	{
+		this.stack = None; x
+	}).orNull
+	// Sets itemStack in slot
+	override def setInventorySlotContents(index: Int, stack: ItemStack) = this.stack = Some(stack)
+	// Decreases stack size in slot
+	override def decrStackSize(index: Int, amount: Int) = this.stack.map(x =>
+	{
+		this.stack = None; x
+	}).orNull
+	// OpenInventory/CloseInventory/markDirty(Nothing to do)
+	override def openInventory() = {}
+	override def closeInventory() = {}
+	override def markDirty() = {}
 }
