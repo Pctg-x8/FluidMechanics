@@ -2,7 +2,7 @@
 itemGroup.tabFluidMechanics=にゃー
 
 # Tile names
-tile.assemblyTable_part.name=組立台(一部)
+tile.assemblyTable_part.name=組立台
 
 # Item names
 item.assemblyTable_caller.name=組立台
