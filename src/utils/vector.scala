@@ -9,7 +9,7 @@ final case class Vector3i(val x: Int, val y: Int, val z: Int)
 final case class Vector3f(val x: Float, val y: Float, val z: Float)
 {
 	final def +(scalar: Float) = Vector3f(x + scalar, y + scalar, z + scalar)
-	final def +(v: Vector3f) = Vector3f(x + v.x, y + v.y, z + v.z) 
+	final def +(v: Vector3f) = Vector3f(x + v.x, y + v.y, z + v.z)
 	final def *(scalar: Float) = Vector3f(x * scalar, y * scalar, z * scalar)
 }
 object Vector3f
@@ -21,8 +21,8 @@ object ForgeDirectionExtensions
 {
 	import net.minecraftforge.common.util.ForgeDirection
 
-	implicit final class ImplicitClass(val d: ForgeDirection)
+	implicit final class ImplicitClass(val d: ForgeDirection) extends AnyVal
 	{
-		final val offset = Vector3i(d.offsetX, d.offsetY, d.offsetZ)
+		final def offset = Vector3i(d.offsetX, d.offsetY, d.offsetZ)
 	}
 }
