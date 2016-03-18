@@ -152,6 +152,18 @@ final class TEAssemblyTable extends TileEntity with IInventory
 	}
 
 	// Extra Utilities //
+	// Restore crafting matrix inventory contents(tile -> inventory)
+	final def restoreCraftingInventoryContents(inv: IInventory) =
+		0 until 9 foreach { (x: Int) => inv.setInventorySlotContents(x, this.craftingGridItems(x)) }
+	// Restore assembly matrix inventory contents
+	final def restoreAssemblyInventoryContents(inv: IInventory) =
+		0 until 4 foreach { (x: Int) => inv.setInventorySlotContents(x, this.assemblyGridItems(x)) }
+	// Save crafting matrix inventory contents(inventory -> tile)
+	final def saveCraftingInventoryContents(inv: IInventory) =
+		0 until 9 foreach { (x: Int) => this.craftingGridItems(x) = inv.getStackInSlot(x) }
+	// Save assembly matrix inventory contents
+	final def saveAssemblyInventoryContents(inv: IInventory) =
+		0 until 4 foreach { (x: Int) => this.assemblyGridItems(x) = inv.getStackInSlot(x) }
 	// Drop all contained items from specified coordinate
 	final def dropItemsAtRandom(world: World, x: Int, y: Int, z: Int) =
 	{

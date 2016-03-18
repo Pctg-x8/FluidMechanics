@@ -11,7 +11,7 @@ final class ContainerAssemblyTable(val worldObj: World, val tile: TEAssemblyTabl
 	// initialize with copying from TEAssemblyTable
 	val craftMatrix = new InventoryCrafting(this, 3, 3)
 	val craftResult = new InventoryCraftResult()
-	for(i <- 0 until 9) craftMatrix.setInventorySlotContents(i, tile.getStackInSlot(i))
+	tile.restoreCraftingInventoryContents(this.craftMatrix)
 	val asmResult = new InventoryAssembleResult()
 
 	// initialize slots
@@ -70,7 +70,7 @@ final class ContainerAssemblyTable(val worldObj: World, val tile: TEAssemblyTabl
 
 		if(!this.worldObj.isRemote)
 		{
-			for(i <- 0 until 9) tile.setInventorySlotContents(i, this.craftMatrix.getStackInSlotOnClosing(i))
+			this.tile.saveCraftingInventoryContents(this.craftMatrix)
 		}
 	}
 	// Called when the crafting matrix is changed
@@ -140,18 +140,12 @@ final class InventoryAssembleResult extends IInventory
 	private var stack: Option[ItemStack] = None
 
 	// Inventory Configurations //
-	// Size of inventory
-	override val getSizeInventory = 1
-	// Name of inventory
-	override val getInventoryName = "asmResult"
-	// Custom names cannot have
-	override val hasCustomInventoryName = false
-	// Stack limit of inventory
-	override val getInventoryStackLimit = 64
-	// Useable by player
-	override def isUseableByPlayer(player: EntityPlayer) = true
-	// Any items are valid
-	override def isItemValidForSlot(index: Int, stack: ItemStack) = true
+	override val getSizeInventory = 1										// Size of inventory
+	override val getInventoryName = "asmResult"								// Name of inventory
+	override val hasCustomInventoryName = false								// Custom names cannot have
+	override val getInventoryStackLimit = 64								// Stack limit of inventory
+	override def isUseableByPlayer(player: EntityPlayer) = true				// Useable by player
+	override def isItemValidForSlot(index: Int, stack: ItemStack) = true	// Any items are valid
 
 	// Inventory Interactions //
 	// Gets itemStack in slot
