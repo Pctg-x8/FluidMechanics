@@ -3,6 +3,7 @@ itemGroup.tabFluidMechanics=Fluid Mechanics
 
 # Tile names
 tile.assemblyTable_part.name=Assembly Table
+tile.energyInjector.attachable.name=Energy Injector
 
 # Item names
 item.assemblyTable_caller.name=Assembly Table

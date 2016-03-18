@@ -134,7 +134,9 @@ final class BlockAssemblyTableTop extends Block(Material.rock)
 	this.applyBlockBounds()
 
 	// Rendering Configurations //
+	override val renderAsNormalBlock = false
 	override val isOpaqueCube = false
+	override val isNormalCube = false
 
 	// Block Interacts //
 	// Called when block is right-clicked(activated, delegate process to lower blocks)

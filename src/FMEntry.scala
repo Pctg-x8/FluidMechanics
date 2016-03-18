@@ -9,6 +9,8 @@ import net.minecraft.init.{Blocks => VanillaBlocks}
 import net.minecraft.creativetab.CreativeTabs
 import cpw.mods.fml.relauncher.{Side, SideOnly}
 import cpw.mods.fml.common.network.NetworkRegistry
+import cpw.mods.fml.client.registry.RenderingRegistry
+import client.renderer.EnergyInjectorRenderer
 
 @Mod(modid=FMEntry.ID, name=FMEntry.Name, version=FMEntry.Version, modLanguage="scala")
 object FMEntry
@@ -35,7 +37,8 @@ object FMEntry
 		Items.init(this.ctab)
 		Tiles.init()
 
-		NetworkRegistry.INSTANCE.registerGuiHandler(this, new GuiHandler())
+		NetworkRegistry.INSTANCE.registerGuiHandler(this, new GuiHandler)
+		RenderingRegistry.registerBlockHandler(new EnergyInjectorRenderer)
 	}
 	@EventHandler
 	def postInit(e: FMLPostInitializationEvent) =
