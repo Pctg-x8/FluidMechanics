@@ -8,14 +8,18 @@ import net.minecraft.block.Block
 object Blocks
 {
 	lazy val asmTable = new BlockAssemblyTablePart
-	
-	def init(ctab: CreativeTabs) = 
+	lazy val asmTableTop = new BlockAssemblyTableTop
+	lazy val attachableEnergyInjector = new BlockAttachableEnergyInjector
+
+	def init(ctab: CreativeTabs) =
 	{
 		System.out.println("Init Blocks...")
-		
+
 		this.registerWithName(this.asmTable, "assemblyTable_part")
+		this.registerWithName(this.asmTableTop, "assemblyTable.top")
+		this.registerWithName(this.attachableEnergyInjector.setCreativeTab(ctab), "energyInjector.attachable")
 	}
-	
+
 	private final def registerWithName(b: Block, ulName: String) =
 		GameRegistry.registerBlock(b.setBlockName(ulName), ulName)
 }

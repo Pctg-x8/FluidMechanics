@@ -31,6 +31,8 @@ final class ItemAssemblyTable extends Item
 					if(world.getBlock(placeInfo.pos.x, placeInfo.pos.y, placeInfo.pos.z) == Blocks.asmTable)
 					{
 						world.setBlock(slavePos.x, slavePos.y, slavePos.z, Blocks.asmTable, blockSlaveDirection.ordinal | BlockAssemblyTablePart.SlaveBit, 3)
+						world.setBlock(placeInfo.pos.x, placeInfo.pos.y + 1, placeInfo.pos.z, Blocks.asmTableTop, blockSlaveDirection.ordinal, 3)
+						world.setBlock(slavePos.x, slavePos.y + 1, slavePos.z, Blocks.asmTableTop, blockSlaveDirection.ordinal | BlockAssemblyTablePart.SlaveBit, 3)
 					}
 					stack.stackSize -= 1
 					true

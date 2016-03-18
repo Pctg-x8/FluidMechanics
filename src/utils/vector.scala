@@ -5,6 +5,8 @@ final case class Vector3i(val x: Int, val y: Int, val z: Int)
 	final def withOffset(o: Vector3i) = Vector3i(x + o.x, y + o.y, z + o.z)
 	final def opposite = Vector3i(-x, -y, -z)
 	final def *(scalar: Int) = Vector3i(x * scalar, y * scalar, z * scalar)
+	final def +(v: Vector3i) = Vector3i(x + v.x, y + v.y, z + v.z)
+	final def unary_- = Vector3i(-x, -y, -z)
 }
 final case class Vector3f(val x: Float, val y: Float, val z: Float)
 {
