@@ -41,8 +41,6 @@ resolvers += "minecraft" at "https://libraries.minecraft.net/"
 
 scalacOptions ++= Seq("-deprecation", "-encoding", "UTF8", "-feature", "-language:implicitConversions")
 
-import java.io.File
-
 fork := true
 baseDirectory in run := (baseDirectory in Compile).value / "eclipse"
 mainClass in Compile := Some("GradleStart")
