@@ -4,7 +4,6 @@ import net.minecraft.block.BlockContainer, net.minecraft.block.material.Material
 import cpw.mods.fml.relauncher.{SideOnly, Side}
 import com.cterm2.mcfm1710.tiles.TEEnergyInjector
 import net.minecraft.world.World
-import com.cterm2.mcfm1710.client.renderer.RenderIds
 
 object EnergyInjectorFluidLimits
 {
@@ -23,8 +22,10 @@ final class BlockAttachableEnergyInjector extends BlockContainer(Material.iron)
 	override val renderAsNormalBlock = false
 	override val isOpaqueCube = false
 	override val isNormalCube = false
-	override val getRenderType = RenderIds.EnergyInjector
 	private def applyBlockBoundsAsHalf() = this.setBlockBounds(0.0f, 0.0f, 0.0f, 1.0f, 0.5f, 1.0f)
+
+	var renderType: Int = 0
+	override def getRenderType = renderType
 
 	// Block Traits //
 	override def createNewTileEntity(world: World, meta: Int) = new TEEnergyInjector(EnergyInjectorFluidLimits.Attachable)

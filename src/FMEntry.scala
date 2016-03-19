@@ -1,6 +1,6 @@
 package com.cterm2.mcfm1710
 
-import cpw.mods.fml.common.Mod
+import cpw.mods.fml.common.{Mod, SidedProxy}
 import cpw.mods.fml.common.Mod.EventHandler
 import cpw.mods.fml.common.event._
 
@@ -9,8 +9,6 @@ import net.minecraft.init.{Blocks => VanillaBlocks}
 import net.minecraft.creativetab.CreativeTabs
 import cpw.mods.fml.relauncher.{Side, SideOnly}
 import cpw.mods.fml.common.network.NetworkRegistry
-import cpw.mods.fml.client.registry.RenderingRegistry
-import client.renderer.EnergyInjectorRenderer
 
 @Mod(modid=FMEntry.ID, name=FMEntry.Name, version=FMEntry.Version, modLanguage="scala")
 object FMEntry
@@ -24,6 +22,8 @@ object FMEntry
 		@SideOnly(Side.CLIENT)
 		override def getTabIconItem() = Item.getItemFromBlock(VanillaBlocks.anvil)
 	}
+	@SidedProxy(clientSide="com.cterm2.mcfm1710.FMEntry$ClientProxy", serverSide="com.cterm2.mcfm1710.FMEntry$ServerProxy")
+	var proxy: IProxy = null
 
 	@EventHandler
 	def preInit(e: FMLPreInitializationEvent) =
@@ -36,12 +36,36 @@ object FMEntry
 		Blocks.init(this.ctab)
 		Items.init(this.ctab)
 		Tiles.init()
+		this.proxy.registerRenderers()
 
 		NetworkRegistry.INSTANCE.registerGuiHandler(this, new GuiHandler)
-		RenderingRegistry.registerBlockHandler(new EnergyInjectorRenderer)
 	}
 	@EventHandler
 	def postInit(e: FMLPostInitializationEvent) =
+	{
+
+	}
+
+	// Proxies //
+	sealed trait IProxy
+	{
+		def registerRenderers() = ()
+	}
+	@SideOnly(Side.CLIENT)
+	final class ClientProxy extends IProxy
+	{
+		override def registerRenderers() =
+		{
+			import cpw.mods.fml.client.registry.{ClientRegistry, RenderingRegistry}
+			import com.cterm2.mcfm1710.tiles._, com.cterm2.mcfm1710.client.renderer._
+
+			Blocks.attachableEnergyInjector.renderType = RenderingRegistry.getNextAvailableRenderId
+			RenderingRegistry.registerBlockHandler(Blocks.attachableEnergyInjector.renderType, new attachableEnergyInjector.BlockRenderer)
+			ClientRegistry.bindTileEntitySpecialRenderer(classOf[TEEnergyInjector], new attachableEnergyInjector.TileEntityRenderer)
+		}
+	}
+	@SideOnly(Side.SERVER)
+	final class ServerProxy extends IProxy
 	{
 
 	}

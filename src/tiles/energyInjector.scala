@@ -10,7 +10,7 @@ object EnergyInjectorSynchronizeDataKeys
 	final val amountKey = "amount"
 }
 // Energy Injector Tile Entities
-final class TEEnergyInjector(val maxFluidAmount: Int) extends TileEntity
+final class TEEnergyInjector(val maxFluidAmount: Int = 0) extends TileEntity
 {
 	import EnergyInjectorSynchronizeDataKeys._
 

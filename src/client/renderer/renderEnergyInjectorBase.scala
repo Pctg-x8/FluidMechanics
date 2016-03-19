@@ -3,72 +3,143 @@ package com.cterm2.mcfm1710.client.renderer
 import cpw.mods.fml.client.registry.ISimpleBlockRenderingHandler
 import net.minecraft.world.IBlockAccess
 import net.minecraft.client.renderer.{RenderBlocks, Tessellator}
-import net.minecraft.block.Block
+import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer
+import net.minecraft.block.Block, net.minecraft.tileentity.TileEntity
+import com.cterm2.mcfm1710.Blocks
 
-// AttachableEnergyInjector Renderer
-final class EnergyInjectorRenderer extends ISimpleBlockRenderingHandler
+// AttachableEnergyInjector Renderers
+package attachableEnergyInjector
 {
-	import EnergyInjectorRenderer._
-
-	override def renderInventoryBlock(block: Block, meta: Int, modelId: Int, renderer: RenderBlocks) =
+	// TileEntity Renderer
+	final class TileEntityRenderer extends TileEntitySpecialRenderer
 	{
-
-	}
-	override def renderWorldBlock(world: IBlockAccess, x: Int, y: Int, z: Int, block: Block, modelId: Int, renderer: RenderBlocks) =
-	{
-		this.renderBlock(block, x.toDouble, y.toDouble, z.toDouble)
-		false
-	}
-	override def shouldRender3DInInventory(meta: Int) = true
-	override val getRenderId = RenderIds.EnergyInjector
-
-	// Render Codes //
-	private def renderBlock(blk: Block, x: Double, y: Double, z: Double) =
-	{
-		import net.minecraft.init.Blocks
-
-		val margin = 1.0d / 16.0d
-		val tess = Tessellator.instance
-
-		val tex = Blocks.iron_block.getBlockTextureFromSide(0)
-		val (u, v, u2, v2) = (tex.getMinU, tex.getMinV, tex.getMaxU, tex.getMaxV)
-		val sideYZPlane = tess.addYZPlane(u, v, u2, v2) _
-		val sideXYPlane = tess.addXYPlane(u, v, u2, v2) _
-
-		// YZ
-		sideYZPlane(x, y + 0.5d, z + margin)(y, z + 1.0d - margin)
-		sideYZPlane(x + margin, y + 0.5d, z)(y, z + margin)
-		sideYZPlane(x + margin, y + 0.5d, z + 1.0 - margin)(y, z + 1.0)
-		sideYZPlane(x + 1.0d, y + 0.5d, z + 1.0d - margin)(y, z + margin)
-		sideYZPlane(x + 1.0d - margin, y + 0.5d, z + 1.0d)(y, z + 1.0 - margin)
-		sideYZPlane(x + 1.0d - margin, y + 0.5d, z + margin)(y, z)
-
-		// XY
-		sideXYPlane(x + margin, y + 0.5d, z)(x + 1.0d - margin, y)
-		sideXYPlane(x, y + 0.5d, z + margin)(x + margin, y)
-		sideXYPlane(x + 1.0 - margin, y + 0.5d, z + margin)(x + 1.0d, y)
-		sideXYPlane(x + 1.0d - margin, y + 0.5d, z + 1.0d)(x + margin, y)
-		sideXYPlane(x + 1.0d, y + 0.5d, z + 1.0d - margin)(x + 1.0 - margin, y)
-		sideXYPlane(x + margin, y + 0.5d, z + 1.0d - margin)(x, y)
-	}
-}
-object EnergyInjectorRenderer
-{
-	implicit class TesselatorHelper(val tess: Tessellator) extends AnyVal
-	{
-		def addYZPlane(u: Float, v: Float, u2: Float, v2: Float)(x: Double, y: Double, z: Double)(y2: Double, z2: Double) =
+		override def renderTileEntityAt(entity: TileEntity, x: Double, y: Double, z: Double, f: Float) =
 		{
-			tess.addVertexWithUV(x, y , z , u , v )
-			tess.addVertexWithUV(x, y2, z , u , v2)
-			tess.addVertexWithUV(x, y2, z2, u2, v2)
-			tess.addVertexWithUV(x, y , z2, u2, v )
+
 		}
-		def addXYPlane(u: Float, v: Float, u2: Float, v2: Float)(x: Double, y: Double, z: Double)(x2: Double, y2: Double) =
+	}
+	// Block Renderer
+	final class BlockRenderer extends ISimpleBlockRenderingHandler
+	{
+		override def renderInventoryBlock(block: Block, modelId: Int, meta: Int, renderer: RenderBlocks) =
 		{
-			tess.addVertexWithUV(x2, y , z, u , v )
-			tess.addVertexWithUV(x2, y2, z, u , v2)
-			tess.addVertexWithUV(x , y2, z, u2, v2)
-			tess.addVertexWithUV(x , y , z, u2, v )
+			import org.lwjgl.opengl.GL11._
+
+			renderer.setRenderBoundsFromBlock(block)
+			glRotatef(90.0f, 0.0f, 1.0f, 0.0f)
+			glTranslatef(-0.5f, -0.5f, -0.5f)
+			this.renderBlockWithNormals(block, 0.0d, 0.0d, 0.0d, renderer)
+			glTranslatef(0.5f, 0.5f, 0.5f)
+		}
+		override def renderWorldBlock(world: IBlockAccess, x: Int, y: Int, z: Int, block: Block, modelId: Int, renderer: RenderBlocks) =
+		{
+			this.renderBlock(block, x.toDouble, y.toDouble, z.toDouble, renderer)
+			false
+		}
+		override def shouldRender3DInInventory(meta: Int) = true
+		override def getRenderId = Blocks.attachableEnergyInjector.renderType
+
+		// Render Codes //
+		private def renderBlock(blk: Block, x: Double, y: Double, z: Double, renderer: RenderBlocks) =
+		{
+			import net.minecraft.init.Blocks._
+
+			val margin = 1.0d / 16.0d
+			val tex = iron_block.getBlockTextureFromSide(0)
+
+			// shrinked render with RenderBlocks
+			def renderShell() =
+			{
+				renderer.renderFaceYNeg(blk, x, y + 1.0d / 256.0d, z, tex)
+				// renderer.renderFaceYPos(blk, x, y - 1.0d / 256.0d, z, tex)
+				renderer.renderMinZ += margin; renderer.renderMaxZ -= margin
+				renderer.renderFaceXNeg(blk, x, y, z, tex)
+				renderer.renderFaceXPos(blk, x, y, z, tex)
+				renderer.renderMinZ -= margin; renderer.renderMaxZ += margin
+				renderer.renderMinX += margin; renderer.renderMaxX -= margin
+				renderer.renderFaceZNeg(blk, x, y, z, tex)
+				renderer.renderFaceZPos(blk, x, y, z, tex)
+				renderer.renderMinX -= margin; renderer.renderMaxX += margin
+				renderer.renderMinX = 0; renderer.renderMaxX = margin
+				renderer.renderFaceZPos(blk, x, y, z - margin, tex)
+				renderer.renderFaceZNeg(blk, x, y, z + margin, tex)
+				renderer.renderMinX = 1.0d - margin; renderer.renderMaxX = 1.0d
+				renderer.renderFaceZPos(blk, x, y, z - margin, tex)
+				renderer.renderFaceZNeg(blk, x, y, z + margin, tex)
+				renderer.renderMinX = 0.0d
+				renderer.renderMinZ = 0; renderer.renderMaxZ = margin
+				renderer.renderFaceXPos(blk, x - margin, y, z, tex)
+				renderer.renderFaceXNeg(blk, x + margin, y, z, tex)
+				renderer.renderMinZ = 1.0d - margin; renderer.renderMaxZ = 1.0d
+				renderer.renderFaceXPos(blk, x - margin, y, z, tex)
+				renderer.renderFaceXNeg(blk, x + margin, y, z, tex)
+				renderer.renderMinZ = 0.0d
+			}
+			renderer.renderFromInside = true; renderShell()
+			renderer.renderFromInside = false; renderShell()
+			// separator
+			renderer.renderFaceXPos(blk, x - 0.5d + 0.5d * margin, y, z, tex)
+			renderer.renderFaceXNeg(blk, x + 0.5d - 0.5d * margin, y, z, tex)
+		}
+		private def renderBlockWithNormals(blk: Block, x: Double, y: Double, z: Double, renderer: RenderBlocks) =
+		{
+			import net.minecraft.init.Blocks._
+
+			val margin = 1.0d / 16.0d
+			val tex = iron_block.getBlockTextureFromSide(0)
+
+			// shrinked render with RenderBlocks
+			val tess = Tessellator.instance
+			def renderShell() =
+			{
+				tess.startDrawingQuads(); tess.setNormal(0.0f, -1.0f, 0.0f)
+				renderer.renderFaceYNeg(blk, x, y + 1.0d / 256.0d, z, tex)
+				// tess.draw(); tess.startDrawingQuads(); tess.setNormal(0.0f, 1.0f, 0.0f)
+				// renderer.renderFaceYPos(blk, x, y - 1.0d / 256.0d, z, tex)
+				renderer.renderMinZ += margin; renderer.renderMaxZ -= margin
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(-1.0f, 0.0f, 0.0f)
+				renderer.renderFaceXNeg(blk, x, y, z, tex)
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(1.0f, 0.0f, 0.0f)
+				renderer.renderFaceXPos(blk, x, y, z, tex)
+				renderer.renderMinZ -= margin; renderer.renderMaxZ += margin
+				renderer.renderMinX += margin; renderer.renderMaxX -= margin
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(0.0f, 0.0f, -1.0f)
+				renderer.renderFaceZNeg(blk, x, y, z, tex)
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(0.0f, 0.0f, 1.0f)
+				renderer.renderFaceZPos(blk, x, y, z, tex)
+				renderer.renderMinX -= margin; renderer.renderMaxX += margin
+				renderer.renderMinX = 0; renderer.renderMaxX = margin
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(0.0f, 0.0f, 1.0f)
+				renderer.renderFaceZPos(blk, x, y, z - margin, tex)
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(0.0f, 0.0f, -1.0f)
+				renderer.renderFaceZNeg(blk, x, y, z + margin, tex)
+				renderer.renderMinX = 1.0d - margin; renderer.renderMaxX = 1.0d
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(0.0f, 0.0f, 1.0f)
+				renderer.renderFaceZPos(blk, x, y, z - margin, tex)
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(0.0f, 0.0f, -1.0f)
+				renderer.renderFaceZNeg(blk, x, y, z + margin, tex)
+				renderer.renderMinX = 0.0d
+				renderer.renderMinZ = 0; renderer.renderMaxZ = margin
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(1.0f, 0.0f, 0.0f)
+				renderer.renderFaceXPos(blk, x - margin, y, z, tex)
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(-1.0f, 0.0f, 0.0f)
+				renderer.renderFaceXNeg(blk, x + margin, y, z, tex)
+				renderer.renderMinZ = 1.0d - margin; renderer.renderMaxZ = 1.0d
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(1.0f, 0.0f, 0.0f)
+				renderer.renderFaceXPos(blk, x - margin, y, z, tex)
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(-1.0f, 0.0f, 0.0f)
+				renderer.renderFaceXNeg(blk, x + margin, y, z, tex)
+				tess.draw()
+				renderer.renderMinZ = 0.0d
+			}
+			renderer.renderFromInside = true; renderShell()
+			renderer.renderFromInside = false; renderShell()
+			// separator
+			tess.startDrawingQuads(); tess.setNormal(1.0f, 0.0f, 0.0f)
+			renderer.renderFaceXPos(blk, x - 0.5d + 0.5d * margin, y, z, tex)
+			tess.draw(); tess.startDrawingQuads(); tess.setNormal(-1.0f, 0.0f, 0.0f)
+			renderer.renderFaceXNeg(blk, x + 0.5d - 0.5d * margin, y, z, tex)
+			tess.draw()
 		}
 	}
 }
