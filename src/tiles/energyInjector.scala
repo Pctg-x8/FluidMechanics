@@ -53,7 +53,6 @@ final class TEEnergyInjector extends TileEntity with IFluidHandler
 				{
 					if(perform && newAmount > 0)
 					{
-						System.out.println(s"Filling: $newAmount")
 						this.stack.amount += newAmount
 						tankHolder.updateTileInfo()
 					}
@@ -155,6 +154,7 @@ final class TEEnergyInjector extends TileEntity with IFluidHandler
 	// Information Provider //
 	def provideInformation(list: java.util.List[String]) =
 	{
+		list add s"Facing on ${this.dir}"
 		list add s"Input(Water) Tank amount: ${this.waterTank.getFluidAmount}"
 		list add s"Output(EnergeticFluid) Tank amount: ${this.energeticTank.getFluidAmount}"
 	}

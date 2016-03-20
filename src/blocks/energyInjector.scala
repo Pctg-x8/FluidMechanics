@@ -41,5 +41,11 @@ final class BlockAttachableEnergyInjector extends BlockContainer(Material.iron)
 	// Block Interacts //
 	// Called when the block is placed in the world
 	override def onBlockPlacedBy(world: World, x: Int, y: Int, z: Int, placer: EntityLivingBase, stack: ItemStack) =
+	{
 		world.setBlockMetadataWithNotify(x, y, z, placer.facingInt, 2)
+		Option(world.getTileEntity(x, y, z).asInstanceOf[TEEnergyInjector]) foreach
+		{
+			_.dir = convertFacingDirection(placer.facingInt).getOpposite
+		}
+	}
 }
