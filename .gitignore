@@ -11,3 +11,6 @@ eclipse/
 logs/
 project/project/
 project/target/
+mcp/
+libs/
+

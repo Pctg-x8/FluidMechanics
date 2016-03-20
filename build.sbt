@@ -3,14 +3,16 @@ version := "1.0"
 organization := "com.cterm2"
 scalaVersion := "2.11.7"
 minecraftVersion := "1.7.10"
-forgeVersion := "10.13.4.1614"
-buildName := "FluidMechanics-mc1710-1341614"
+val forgeRevision = 1614
+forgeVersion := s"10.13.4.$forgeRevision"
+buildName := s"FluidMechanics-mc1710-134$forgeRevision"
 
 scalaSource in Compile := baseDirectory.value / "src"
 val srcJarVersionSignature = Def.setting { Seq(minecraftVersion.value, forgeVersion.value, minecraftVersion.value).mkString("-") }
 val gradleCaches = file(System.getProperty("user.home")) / ".gradle" / "caches"
 val forgeSources = Def.setting { gradleCaches / "minecraft" / "net" / "minecraftforge" / "forge" / srcJarVersionSignature.value }
 unmanagedJars in Compile += forgeSources.value / ("forgeSrc-" + srcJarVersionSignature.value + ".jar")
+unmanagedBase in Compile := (baseDirectory in Compile).value / "libs"
 libraryDependencies ++= Seq(
 	"org.apache.logging.log4j" % "log4j-api" % "2.0-beta9",
 	"org.apache.logging.log4j" % "log4j-core" % "2.0-beta9",
