@@ -30,7 +30,13 @@ final class BlockAttachableEnergyInjector extends BlockContainer(Material.iron)
 	override def getRenderType = renderType
 
 	// Block Traits //
-	override def createNewTileEntity(world: World, meta: Int) = new TEEnergyInjector(EnergyInjectorFluidLimits.Attachable)
+	override def createNewTileEntity(world: World, meta: Int) =
+	{
+		val te = new TEEnergyInjector
+		te.dir = convertFacingDirection(meta).getOpposite
+		te.maxFluidAmount = EnergyInjectorFluidLimits.Attachable
+		te
+	}
 
 	// Block Interacts //
 	// Called when the block is placed in the world

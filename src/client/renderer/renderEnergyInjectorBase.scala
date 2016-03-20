@@ -15,7 +15,7 @@ package attachableEnergyInjector
 	{
 		override def renderTileEntityAt(entity: TileEntity, x: Double, y: Double, z: Double, f: Float) =
 		{
-
+			
 		}
 	}
 	// Block Renderer
