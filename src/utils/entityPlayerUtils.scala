@@ -1,10 +1,10 @@
 package com.cterm2.mcfm1710.utils
 
-import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.entity.EntityLivingBase
 import net.minecraftforge.common.util.ForgeDirection
 import net.minecraft.util.MathHelper
 
-object EntityPlayerUtils
+object EntityLivingUtils
 {
 	// Converts facing direction integer to ForgeDirection
 	def convertFacingDirection(i: Int) = i match
@@ -14,7 +14,7 @@ object EntityPlayerUtils
 		case 2 => ForgeDirection.NORTH
 		case 3 => ForgeDirection.EAST
 	}
-	implicit final class ImplicitWrapper(val p: EntityPlayer) extends AnyVal
+	implicit final class ImplicitWrapper(val p: EntityLivingBase) extends AnyVal
 	{
 		// Gets player facing direction as integer
 		def directionInt = MathHelper.floor_double((p.rotationYaw * 4.0f / 360.0f).asInstanceOf[Double] + 0.5d).asInstanceOf[Int] & 3

@@ -33,14 +33,14 @@ package attachableEnergyInjector
 		}
 		override def renderWorldBlock(world: IBlockAccess, x: Int, y: Int, z: Int, block: Block, modelId: Int, renderer: RenderBlocks) =
 		{
-			this.renderBlock(block, x.toDouble, y.toDouble, z.toDouble, renderer)
+			this.renderBlock(block, world.getBlockMetadata(x, y, z), x.toDouble, y.toDouble, z.toDouble, renderer)
 			false
 		}
 		override def shouldRender3DInInventory(meta: Int) = true
 		override def getRenderId = Blocks.attachableEnergyInjector.renderType
 
 		// Render Codes //
-		private def renderBlock(blk: Block, x: Double, y: Double, z: Double, renderer: RenderBlocks) =
+		private def renderBlock(blk: Block, meta: Int, x: Double, y: Double, z: Double, renderer: RenderBlocks) =
 		{
 			import net.minecraft.init.Blocks._
 
@@ -78,8 +78,16 @@ package attachableEnergyInjector
 			renderer.renderFromInside = true; renderShell()
 			renderer.renderFromInside = false; renderShell()
 			// separator
-			renderer.renderFaceXPos(blk, x - 0.5d + 0.5d * margin, y, z, tex)
-			renderer.renderFaceXNeg(blk, x + 0.5d - 0.5d * margin, y, z, tex)
+			if((meta & 0x01) == 0)
+			{
+				renderer.renderFaceXPos(blk, x - 0.5d + 0.5d * margin, y, z, tex)
+				renderer.renderFaceXNeg(blk, x + 0.5d - 0.5d * margin, y, z, tex)
+			}
+			else
+			{
+				renderer.renderFaceZPos(blk, x, y, z - 0.5d + 0.5d * margin, tex)
+				renderer.renderFaceZNeg(blk, x, y, z + 0.5d - 0.5d * margin, tex)
+			}
 		}
 		private def renderBlockWithNormals(blk: Block, x: Double, y: Double, z: Double, renderer: RenderBlocks) =
 		{

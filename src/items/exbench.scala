@@ -4,7 +4,7 @@ import net.minecraft.item.{Item, ItemStack}
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.world.World
 import net.minecraftforge.common.util.ForgeDirection
-import com.cterm2.mcfm1710.utils.EntityPlayerUtils._
+import com.cterm2.mcfm1710.utils.EntityLivingUtils._
 import com.cterm2.mcfm1710.utils.{Vector3i, BlockPlacementInfo}
 import com.cterm2.mcfm1710.utils.ForgeDirectionExtensions._
 import com.cterm2.mcfm1710.Blocks, com.cterm2.mcfm1710.blocks.BlockAssemblyTablePart
