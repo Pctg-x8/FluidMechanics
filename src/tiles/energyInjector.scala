@@ -7,23 +7,27 @@ import net.minecraft.network.NetworkManager
 
 object EnergyInjectorSynchronizeDataKeys
 {
-	final val amountKey = "amount"
+	final val waterAmountKey = "WaterAmount"
+	final val efAmountKey = "EnergyFluidsAmount"
 }
 // Energy Injector Tile Entities
 final class TEEnergyInjector(val maxFluidAmount: Int = 0) extends TileEntity
 {
 	import EnergyInjectorSynchronizeDataKeys._
 
-	private var currentFluidAmount = 0
+	private var currentWaterAmount = 0
+	private var currentEFAmount = 0
 
 	// Data Synchronizations //
 	private def writeSynchronizeDataToNBT(tag: NBTTagCompound) =
 	{
-		tag.setInteger(amountKey, this.currentFluidAmount)
+		tag.setInteger(waterAmountKey, this.currentWaterAmount)
+		tag.setInteger(efAmountKey, this.currentEFAmount)
 	}
 	private def readSynchronizeDataFromNBT(tag: NBTTagCompound) =
 	{
-		this.currentFluidAmount = tag.getInteger(amountKey)
+		this.currentWaveAmount = tag.getInteger(waterAmountKey)
+		this.currentEFAmount = tag.getInteger(efAmountKey)
 	}
 	override def writeToNBT(tag: NBTTagCompound) =
 	{
@@ -42,5 +46,5 @@ final class TEEnergyInjector(val maxFluidAmount: Int = 0) extends TileEntity
 		new S35PacketUpdateTileEntity(this.xCoord, this.yCoord, this.zCoord, 1, tag)
 	}
 	override def onDataPacket(net: NetworkManager, packet: S35PacketUpdateTileEntity) =
-		{ _: Unit => packet.func_148857_g() } andThen { this.readSynchronizeDataFromNBT(_) }
+		{ packet.func_148857_g _ } andThen { this.readSynchronizeDataFromNBT(_) }
 }
