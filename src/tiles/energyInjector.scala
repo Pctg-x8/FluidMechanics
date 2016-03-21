@@ -6,7 +6,9 @@ import net.minecraft.network.play.server.S35PacketUpdateTileEntity
 import net.minecraft.network.NetworkManager
 import net.minecraftforge.fluids.{IFluidTank, FluidStack, FluidTankInfo, IFluidHandler, FluidRegistry, Fluid}
 import net.minecraftforge.common.util.ForgeDirection
+import cpw.mods.fml.common.Optional
 import com.cterm2.mcfm1710.Fluids
+import mekanism.api.energy.IStrictEnergyAcceptor
 
 object EnergyInjectorSynchronizeDataKeys
 {
@@ -16,7 +18,8 @@ object EnergyInjectorSynchronizeDataKeys
 	final val MaxAmountKey = "MaxFluidAmount"
 }
 // Energy Injector Tile Entities
-final class TEEnergyInjector extends TileEntity with IFluidHandler
+@Optional.Interface(iface = "mekanism.api.energy.IStrictEnergyAcceptor", modid="Mekanism", striprefs = true)
+final class TEEnergyInjector extends TileEntity with IFluidHandler with IStrictEnergyAcceptor
 {
 	tankHolder =>
 	import EnergyInjectorSynchronizeDataKeys._
@@ -153,14 +156,9 @@ final class TEEnergyInjector extends TileEntity with IFluidHandler
 	}
 
 	// TileEntity Interacts //
-	override val canUpdate = true
-	override def updateEntity() =
-	{
-		// apply constant energies(10RF/t)
-		this.transmittedPower(10)
-	}
-	// Called when power transmitted(Unit: RF/t)
-	def transmittedPower(amount: Int) =
+	override val canUpdate = false
+	// Called when power transmitted(Unit: RF/t)(Returns used energies)
+	def injectFluids(amount: Int) =
 	{
 		// 1:1 = energy:water => energeticFluid
 		val newEnergeticFluid = Fluids.newEnergeticFluidStack(amount)
@@ -172,10 +170,26 @@ final class TEEnergyInjector extends TileEntity with IFluidHandler
 			newEnergeticFluid.amount = converted
 			this.waterTank.drain(converted, true)
 			this.energeticTank.fill(newEnergeticFluid, true)
-			amount - converted
+			converted
 		}
-		else amount
+		else 0
 	}
+
+	// Energy Acceptor Interacts //
+	override def transferEnergyToAcceptor(side: ForgeDirection, amount: Double) = side match
+	{
+		case ForgeDirection.UP => this.injectFluids(amount.asInstanceOf[Int]).toDouble
+		case _ => 0.0d
+	}
+	override def canReceiveEnergy(side: ForgeDirection) = side == ForgeDirection.UP
+
+	// Energy Storage Exports(Note: EnergyInjector does not store any energies) //
+	override val getEnergy = 0.0d
+	override def setEnergy(newValue: Double) =
+	{
+		System.out.println(s"Storage Set: $newValue")
+	}
+	override val getMaxEnergy = 4000.0d			// provides max acceptable energies in EnergyAcceptor
 
 	// Information Provider //
 	def provideInformation(list: java.util.List[String]) =

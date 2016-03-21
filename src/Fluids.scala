@@ -6,12 +6,12 @@ import net.minecraft.init.{Blocks => VanillaBlocks}
 
 object Fluids
 {
-	final class EnergeticFluid extends Fluid("energeticFluid")
+	final class EnergeticFluid extends Fluid("lava")
 	{
 		// Fluid Properties //
 		setBlock(VanillaBlocks.lava)
 		setLuminosity(7)
-		setUnlocalizedName("energeticFluid")
+		setUnlocalizedName("lava")
 	}
 
 	lazy val energeticFluid = new EnergeticFluid
