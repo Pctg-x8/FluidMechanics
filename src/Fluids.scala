@@ -11,7 +11,7 @@ object Fluids
 		// Fluid Properties //
 		setBlock(VanillaBlocks.lava)
 		setLuminosity(7)
-		setUnlocalizedName("lava")
+		setUnlocalizedName("energeticFluid")
 	}
 
 	lazy val energeticFluid = new EnergeticFluid

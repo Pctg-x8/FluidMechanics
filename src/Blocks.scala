@@ -10,6 +10,7 @@ object Blocks
 	lazy val asmTable = new BlockAssemblyTablePart
 	lazy val asmTableTop = new BlockAssemblyTableTop
 	lazy val attachableEnergyInjector = new BlockAttachableEnergyInjector
+	lazy val energyInjector = new BlockEnergyInjector
 
 	def init(ctab: CreativeTabs) =
 	{
@@ -18,6 +19,7 @@ object Blocks
 		this.registerWithName(this.asmTable, "assemblyTable_part")
 		this.registerWithName(this.asmTableTop, "assemblyTable.top")
 		this.registerWithName(this.attachableEnergyInjector.setCreativeTab(ctab), "energyInjector.attachable")
+		this.registerWithName(this.energyInjector.setCreativeTab(ctab), "energyInjector.standalone")
 	}
 
 	private final def registerWithName(b: Block, ulName: String) =

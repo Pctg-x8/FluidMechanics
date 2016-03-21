@@ -15,31 +15,28 @@ object EnergyInjectorSynchronizeDataKeys
 	final val WaterKey = "WaterData"
 	final val EnergeticKey = "EnergyFluidsData"
 	final val BlockDirectionKey = "BlockDirection"
-	final val MaxAmountKey = "MaxFluidAmount"
 }
-// Energy Injector Tile Entities
-@Optional.Interface(iface = "mekanism.api.energy.IStrictEnergyAcceptor", modid="Mekanism", striprefs = true)
-final class TEEnergyInjector extends TileEntity with IFluidHandler with IStrictEnergyAcceptor
+// Energy Injector Tile Entity Base
+abstract class TEEnergyInjectorBase(val maxFluidAmount: Int) extends TileEntity with IFluidHandler
 {
 	tankHolder =>
 	import EnergyInjectorSynchronizeDataKeys._
 
 	// External Values //
 	var dir: ForgeDirection = ForgeDirection.UNKNOWN
-	var maxFluidAmount: Int = 0
 
 	// Make as Combinated Fluid Tanks //
 	// Content restricted fluid tank
 	private class RestrictedFluidTank(val acceptType: Fluid) extends IFluidTank
 	{
 		// Tank Traits //
-		// Capacity
-		override val getCapacity = tankHolder.maxFluidAmount
-		// Information provider
+		override def getCapacity = tankHolder.maxFluidAmount
 		override lazy val getInfo = new FluidTankInfo(this)
+		private[TEEnergyInjectorBase] def canAccept(fluid: Fluid) = fluid == this.stack.getFluid
+		private[TEEnergyInjectorBase] def canAccept(fluid: FluidStack): Boolean = this.canAccept(fluid.getFluid)
 
 		// Tank Exports //
-		private val stack = new FluidStack(acceptType, 0)
+		private lazy val stack = new FluidStack(acceptType, 0)
 		override def getFluid = this.stack
 		override def getFluidAmount = this.stack.amount
 
@@ -75,24 +72,24 @@ final class TEEnergyInjector extends TileEntity with IFluidHandler with IStrictE
 			}
 			new FluidStack(this.stack, drained)
 		}
-		private[TEEnergyInjector] def synchronizeData =
+
+		// Data Synchronizations //
+		private[TEEnergyInjectorBase] def synchronizeData =
 		{
 			val tag = new NBTTagCompound
 			this.stack.writeToNBT(tag)
 			tag
 		}
-		private[TEEnergyInjector] def synchronizeDataFrom(tag: NBTTagCompound) =
+		private[TEEnergyInjectorBase] def synchronizeDataFrom(tag: NBTTagCompound) =
 		{
 			val newFluid = FluidStack.loadFluidStackFromNBT(tag)
 			if(!this.canAccept(newFluid)) throw new RuntimeException("Restriction Error")
 			this.stack.amount = newFluid.amount
 		}
-		private[TEEnergyInjector] def canAccept(fluid: Fluid) = fluid == this.stack.getFluid
-		private[TEEnergyInjector] def canAccept(fluid: FluidStack): Boolean = this.canAccept(fluid.getFluid)
 	}
 	private lazy val waterTank = new RestrictedFluidTank(FluidRegistry.WATER)
 	private lazy val energeticTank = new RestrictedFluidTank(Fluids.energeticFluid)
-	private def getTank(from: ForgeDirection) = from match
+	private final def getTank(from: ForgeDirection) = from match
 	{
 		case ForgeDirection.EAST if dir == ForgeDirection.NORTH => Some(this.waterTank)
 		case ForgeDirection.EAST if dir == ForgeDirection.SOUTH => Some(this.energeticTank)
@@ -104,61 +101,60 @@ final class TEEnergyInjector extends TileEntity with IFluidHandler with IStrictE
 		case ForgeDirection.SOUTH if dir == ForgeDirection.EAST => Some(this.waterTank)
 		case _ => None
 	}
-	override def getTankInfo(from: ForgeDirection) = Array((this.getTank(from) map { _.getInfo }).orNull)
-	override def canDrain(from: ForgeDirection, fluid: Fluid) = this.getTank(from).isDefined
-	override def canFill(from: ForgeDirection, fluid: Fluid) = this.getTank(from) map { _ canAccept fluid } getOrElse false
-	override def fill(from: ForgeDirection, resource: FluidStack, perform: Boolean) = this.getTank(from) map
+	override final def getTankInfo(from: ForgeDirection) = Array(this.getTank(from) map { _.getInfo } getOrElse null)
+	override final def canDrain(from: ForgeDirection, fluid: Fluid) = this.getTank(from).isDefined
+	override final def canFill(from: ForgeDirection, fluid: Fluid) = this.getTank(from) map { _ canAccept fluid } getOrElse false
+	override final def fill(from: ForgeDirection, resource: FluidStack, perform: Boolean) = this.getTank(from) map
 	{
 		x => if(x canAccept resource) x.fill(resource, perform) else 0
 	} getOrElse 0
-	override def drain(from: ForgeDirection, resource: FluidStack, perform: Boolean) = (this.getTank(from) map
+	override final def drain(from: ForgeDirection, resource: FluidStack, perform: Boolean) = this.getTank(from) map
 	{
 		x => if(x.getFluid == resource.getFluid) x.drain(resource.amount, perform) else null
-	}).orNull
-	override def drain(from: ForgeDirection, maxDrain: Int, perform: Boolean) = (this.getTank(from) map { _.drain(maxDrain, perform) }).orNull
+	} getOrElse null
+	override final def drain(from: ForgeDirection, maxDrain: Int, perform: Boolean) =
+		this.getTank(from) map { _.drain(maxDrain, perform) } getOrElse null
 
 	// Data Synchronizations //
-	private def writeSynchronizeDataToNBT(tag: NBTTagCompound) =
+	private final def writeSynchronizeDataToNBT(tag: NBTTagCompound) =
 	{
 		tag.setTag(WaterKey, this.waterTank.synchronizeData)
 		tag.setTag(EnergeticKey, this.energeticTank.synchronizeData)
+		tag
 	}
-	private def readSynchronizeDataFromNBT(tag: NBTTagCompound) =
+	private final def readSynchronizeDataFromNBT(tag: NBTTagCompound) =
 	{
 		this.waterTank synchronizeDataFrom tag.getTag(WaterKey).asInstanceOf[NBTTagCompound]
 		this.energeticTank synchronizeDataFrom tag.getTag(EnergeticKey).asInstanceOf[NBTTagCompound]
+		tag
 	}
-	override def writeToNBT(tag: NBTTagCompound) =
+	override final def writeToNBT(tag: NBTTagCompound) =
 	{
 		super.writeToNBT(tag)
 		tag.setInteger(BlockDirectionKey, this.dir.ordinal)
-		tag.setInteger(MaxAmountKey, this.maxFluidAmount)
 		this.writeSynchronizeDataToNBT(tag)
 	}
-	override def readFromNBT(tag: NBTTagCompound) =
+	override final def readFromNBT(tag: NBTTagCompound) =
 	{
 		super.readFromNBT(tag)
 		this.dir = ForgeDirection.values()(tag.getInteger(BlockDirectionKey))
-		this.maxFluidAmount = tag.getInteger(MaxAmountKey)
 		this.readSynchronizeDataFromNBT(tag)
 	}
-	override def getDescriptionPacket() =
-	{
-		val tag = new NBTTagCompound
-		this.writeSynchronizeDataToNBT(tag)
-		new S35PacketUpdateTileEntity(this.xCoord, this.yCoord, this.zCoord, 1, tag)
-	}
-	override def onDataPacket(net: NetworkManager, packet: S35PacketUpdateTileEntity) = this.readSynchronizeDataFromNBT(packet.func_148857_g)
-	private def updateTileInfo() =
+	override final def getDescriptionPacket() =
+		({ this.writeSynchronizeDataToNBT _ } andThen
+		{ new S35PacketUpdateTileEntity(this.xCoord, this.yCoord, this.zCoord, 1, _) })(new NBTTagCompound)
+	override final def onDataPacket(net: NetworkManager, packet: S35PacketUpdateTileEntity) =
+		({ (_: S35PacketUpdateTileEntity).func_148857_g() } andThen { this.readSynchronizeDataFromNBT _ })(packet)
+	final def updateTileInfo() =
 	{
 		this.worldObj.markBlockForUpdate(this.xCoord, this.yCoord, this.zCoord)
 		this.markDirty()
 	}
 
 	// TileEntity Interacts //
-	override val canUpdate = false
-	// Called when power transmitted(Unit: RF/t)(Returns used energies)
-	def injectFluids(amount: Int) =
+	override final val canUpdate = false
+	// Called when power transmitted(Unit: RF/t)(Returns used energy)
+	final def injectFluids(amount: Int) =
 	{
 		// 1:1 = energy:water => energeticFluid
 		val newEnergeticFluid = Fluids.newEnergeticFluidStack(amount)
@@ -168,13 +164,35 @@ final class TEEnergyInjector extends TileEntity with IFluidHandler with IStrictE
 		if(converted > 0)
 		{
 			newEnergeticFluid.amount = converted
-			this.waterTank.drain(converted, true)
-			this.energeticTank.fill(newEnergeticFluid, true)
+			this.waterTank.drain(converted, true); this.energeticTank.fill(newEnergeticFluid, true)
 			converted
 		}
 		else 0
 	}
 
+	// Information Provider //
+	def provideInformation(list: java.util.List[String]) =
+	{
+		list add s"Facing on ${this.dir}"
+		list add s"Input(Water) Tank amount: ${this.waterTank.getFluidAmount} mb"
+		list add s"Output(EnergeticFluid) Tank amount: ${this.energeticTank.getFluidAmount} mb"
+	}
+}
+
+object EnergyInjectorFluidLimits
+{
+	// unit: milli-buckets
+	final val Module = 4 * 1000
+	final val Standalone = 16 * 1000
+}
+
+// Energy Injector Module Tile Entity
+final class TEEnergyInjectorModule extends TEEnergyInjectorBase(EnergyInjectorFluidLimits.Module)
+
+// Energy Injector Tile Entity
+@Optional.Interface(iface = "mekanism.api.energy.IStrictEnergyAcceptor", modid="Mekanism", striprefs = true)
+final class TEEnergyInjector extends TEEnergyInjectorBase(EnergyInjectorFluidLimits.Standalone) with IStrictEnergyAcceptor
+{
 	// Energy Acceptor Interacts //
 	override def transferEnergyToAcceptor(side: ForgeDirection, amount: Double) = side match
 	{
@@ -185,17 +203,6 @@ final class TEEnergyInjector extends TileEntity with IFluidHandler with IStrictE
 
 	// Energy Storage Exports(Note: EnergyInjector does not store any energies) //
 	override val getEnergy = 0.0d
-	override def setEnergy(newValue: Double) =
-	{
-		System.out.println(s"Storage Set: $newValue")
-	}
-	override val getMaxEnergy = 4000.0d			// provides max acceptable energies in EnergyAcceptor
-
-	// Information Provider //
-	def provideInformation(list: java.util.List[String]) =
-	{
-		list add s"Facing on ${this.dir}"
-		list add s"Input(Water) Tank amount: ${this.waterTank.getFluidAmount} mb"
-		list add s"Output(EnergeticFluid) Tank amount: ${this.energeticTank.getFluidAmount} mb"
-	}
+	override def setEnergy(newValue: Double) = ()
+	override val getMaxEnergy = EnergyInjectorFluidLimits.Standalone.toDouble	// provides max acceptable energy in EnergyAcceptor
 }

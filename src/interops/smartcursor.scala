@@ -32,7 +32,8 @@ class BlockInformationProvider extends IBlockProcessor
 
 	override def process(list: java.util.List[String], block: Block, meta: Int, world: World, x: Int, y: Int, z: Int) = block match
 	{
-		case _: BlockAttachableEnergyInjector => world.getTileEntity(x, y, z).asInstanceOf[TEEnergyInjector].provideInformation(list)
+		case _: BlockAttachableEnergyInjector => world.getTileEntity(x, y, z).asInstanceOf[TEEnergyInjectorModule].provideInformation(list)
+		case _: BlockEnergyInjector => world.getTileEntity(x, y, z).asInstanceOf[TEEnergyInjector].provideInformation(list)
 		case _ => ()
 	}
 }

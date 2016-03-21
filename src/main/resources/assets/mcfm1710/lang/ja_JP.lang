@@ -3,7 +3,8 @@ itemGroup.tabFluidMechanics=にゃー
 
 # Tile names
 tile.assemblyTable_part.name=組立台
-tile.energyInjector.attachable.name=エネルギー注入機
+tile.energyInjector.attachable.name=エネルギー注入モジュール
+tile.energyInjector.standalone.name=エネルギー注入機
 
 # Item names
 item.assemblyTable_caller.name=組立台
