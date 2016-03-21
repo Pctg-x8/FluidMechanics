@@ -6,6 +6,7 @@ import net.minecraft.network.play.server.S35PacketUpdateTileEntity
 import net.minecraft.network.NetworkManager
 import net.minecraftforge.fluids.{IFluidTank, FluidStack, FluidTankInfo, IFluidHandler, FluidRegistry, Fluid}
 import net.minecraftforge.common.util.ForgeDirection
+import com.cterm2.mcfm1710.Fluids
 
 object EnergyInjectorSynchronizeDataKeys
 {
@@ -87,7 +88,7 @@ final class TEEnergyInjector extends TileEntity with IFluidHandler
 		private[TEEnergyInjector] def canAccept(fluid: FluidStack): Boolean = this.canAccept(fluid.getFluid)
 	}
 	private lazy val waterTank = new RestrictedFluidTank(FluidRegistry.WATER)
-	private lazy val energeticTank = new RestrictedFluidTank(FluidRegistry.LAVA)
+	private lazy val energeticTank = new RestrictedFluidTank(Fluids.energeticFluid)
 	private def getTank(from: ForgeDirection) = from match
 	{
 		case ForgeDirection.EAST if dir == ForgeDirection.NORTH => Some(this.waterTank)
@@ -151,11 +152,36 @@ final class TEEnergyInjector extends TileEntity with IFluidHandler
 		this.markDirty()
 	}
 
+	// TileEntity Interacts //
+	override val canUpdate = true
+	override def updateEntity() =
+	{
+		// apply constant energies(10RF/t)
+		this.transmittedPower(10)
+	}
+	// Called when power transmitted(Unit: RF/t)
+	def transmittedPower(amount: Int) =
+	{
+		// 1:1 = energy:water => energeticFluid
+		val newEnergeticFluid = Fluids.newEnergeticFluidStack(amount)
+		val drainable = this.waterTank.drain(amount, false).amount
+		val acceptable = this.energeticTank.fill(newEnergeticFluid, false)
+		val converted = Math.min(drainable, acceptable)
+		if(converted > 0)
+		{
+			newEnergeticFluid.amount = converted
+			this.waterTank.drain(converted, true)
+			this.energeticTank.fill(newEnergeticFluid, true)
+			amount - converted
+		}
+		else amount
+	}
+
 	// Information Provider //
 	def provideInformation(list: java.util.List[String]) =
 	{
 		list add s"Facing on ${this.dir}"
-		list add s"Input(Water) Tank amount: ${this.waterTank.getFluidAmount}"
-		list add s"Output(EnergeticFluid) Tank amount: ${this.energeticTank.getFluidAmount}"
+		list add s"Input(Water) Tank amount: ${this.waterTank.getFluidAmount} mb"
+		list add s"Output(EnergeticFluid) Tank amount: ${this.energeticTank.getFluidAmount} mb"
 	}
 }

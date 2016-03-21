@@ -33,8 +33,9 @@ object FMEntry
 	@EventHandler
 	def init(e: FMLInitializationEvent) =
 	{
-		Blocks.init(this.ctab)
 		Items.init(this.ctab)
+		Fluids.init()
+		Blocks.init(this.ctab)
 		Tiles.init()
 		this.proxy.registerRenderers()
 
