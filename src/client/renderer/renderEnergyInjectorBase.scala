@@ -15,16 +15,16 @@ package attachableEnergyInjector
 	{
 		override def renderTileEntityAt(entity: TileEntity, x: Double, y: Double, z: Double, f: Float) =
 		{
-			
+
 		}
 	}
 	// Block Renderer
 	final class BlockRenderer extends ISimpleBlockRenderingHandler
 	{
+		import org.lwjgl.opengl.GL11._
+
 		override def renderInventoryBlock(block: Block, modelId: Int, meta: Int, renderer: RenderBlocks) =
 		{
-			import org.lwjgl.opengl.GL11._
-
 			renderer.setRenderBoundsFromBlock(block)
 			glRotatef(90.0f, 0.0f, 1.0f, 0.0f)
 			glTranslatef(-0.5f, -0.5f, -0.5f)
@@ -33,6 +33,7 @@ package attachableEnergyInjector
 		}
 		override def renderWorldBlock(world: IBlockAccess, x: Int, y: Int, z: Int, block: Block, modelId: Int, renderer: RenderBlocks) =
 		{
+			Tessellator.instance.setColorOpaque_F(1.0f, 1.0f, 1.0f)
 			this.renderBlock(block, world.getBlockMetadata(x, y, z), x.toDouble, y.toDouble, z.toDouble, renderer)
 			false
 		}
@@ -44,7 +45,7 @@ package attachableEnergyInjector
 		{
 			import net.minecraft.init.Blocks._
 
-			val margin = 1.0d / 16.0d
+			val margin = 1.0d / 8.0d
 			val tex = iron_block.getBlockTextureFromSide(0)
 
 			// shrinked render with RenderBlocks
@@ -93,7 +94,7 @@ package attachableEnergyInjector
 		{
 			import net.minecraft.init.Blocks._
 
-			val margin = 1.0d / 16.0d
+			val margin = 1.0d / 8.0d
 			val tex = iron_block.getBlockTextureFromSide(0)
 
 			// shrinked render with RenderBlocks

@@ -10,5 +10,6 @@ object Tiles
 		GameRegistry.registerTileEntity(classOf[TEAssemblyTable], "TEAssemblyTable")
 		GameRegistry.registerTileEntity(classOf[TEEnergyInjectorModule], "TEEnergyInjectorModule")
 		GameRegistry.registerTileEntity(classOf[TEEnergyInjector], "TEEnergyInjector")
+		GameRegistry.registerTileEntity(classOf[thermalGenerator.TileEntity], "TEThermalGenerator")
 	}
 }

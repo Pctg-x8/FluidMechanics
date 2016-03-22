@@ -20,8 +20,9 @@ object Blocks
 		this.registerWithName(this.asmTableTop, "assemblyTable.top")
 		this.registerWithName(this.attachableEnergyInjector.setCreativeTab(ctab), "energyInjector.attachable")
 		this.registerWithName(this.energyInjector.setCreativeTab(ctab), "energyInjector.standalone")
+		this.registerWithName(thermalGenerator.Block.setCreativeTab(ctab), "sourceGenerator.thermal")
 	}
 
-	private final def registerWithName(b: Block, ulName: String) =
-		GameRegistry.registerBlock(b.setBlockName(ulName), ulName)
+	@inline
+	private final def registerWithName[B <: Block](b: B, ulName: String) = GameRegistry.registerBlock(b.setBlockName(ulName), ulName)
 }

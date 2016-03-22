@@ -41,11 +41,6 @@ object FMEntry
 
 		NetworkRegistry.INSTANCE.registerGuiHandler(this, new GuiHandler)
 	}
-	@EventHandler
-	def postInit(e: FMLPostInitializationEvent) =
-	{
-
-	}
 
 	// Proxies //
 	sealed trait IProxy
@@ -55,14 +50,24 @@ object FMEntry
 	@SideOnly(Side.CLIENT)
 	final class ClientProxy extends IProxy
 	{
+		import cpw.mods.fml.client.registry.{RenderingRegistry, ISimpleBlockRenderingHandler}
+
 		override def registerRenderers() =
 		{
-			import cpw.mods.fml.client.registry.{ClientRegistry, RenderingRegistry}
+			import cpw.mods.fml.client.registry.ClientRegistry
 			import com.cterm2.mcfm1710.tiles._, com.cterm2.mcfm1710.client.renderer._
 
-			Blocks.attachableEnergyInjector.renderType = RenderingRegistry.getNextAvailableRenderId
-			RenderingRegistry.registerBlockHandler(Blocks.attachableEnergyInjector.renderType, new attachableEnergyInjector.BlockRenderer)
+			Blocks.attachableEnergyInjector.renderType = this.registerBlockRenderer(new attachableEnergyInjector.BlockRenderer)
+			sourceGenerator.CommonValues.renderType = this.registerBlockRenderer(new sourceGenerator.BlockRenderer)
 			ClientRegistry.bindTileEntitySpecialRenderer(classOf[TEEnergyInjector], new attachableEnergyInjector.TileEntityRenderer)
+		}
+
+		@inline
+		private def registerBlockRenderer(render: ISimpleBlockRenderingHandler) =
+		{
+			val id = RenderingRegistry.getNextAvailableRenderId
+			RenderingRegistry.registerBlockHandler(id, render)
+			id
 		}
 	}
 	@SideOnly(Side.SERVER)
