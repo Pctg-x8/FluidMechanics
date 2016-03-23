@@ -3,7 +3,6 @@ package com.cterm2.mcfm1710.interops.smartcursor
 import com.asaskevich.smartcursor.api.{ModuleConnector, IBlockProcessor}
 import cpw.mods.fml.common.Mod
 import cpw.mods.fml.common.event._
-import com.cterm2.mcfm1710.blocks._, com.cterm2.mcfm1710.tiles._
 
 // Module Connector
 @Mod(modid = SCModuleConnector.ID, name = SCModuleConnector.Name, version = SCModuleConnector.Version, modLanguage = "scala")
@@ -30,10 +29,11 @@ class BlockInformationProvider extends IBlockProcessor
 	override val getModuleName = "Fluid Mechanics"
 	override val getAuthor = "S.Percentage"
 
+	import com.cterm2.mcfm1710.energyInjector
 	override def process(list: java.util.List[String], block: Block, meta: Int, world: World, x: Int, y: Int, z: Int) = block match
 	{
-		case _: BlockAttachableEnergyInjector => world.getTileEntity(x, y, z).asInstanceOf[TEEnergyInjectorModule].provideInformation(list)
-		case _: BlockEnergyInjector => world.getTileEntity(x, y, z).asInstanceOf[TEEnergyInjector].provideInformation(list)
+		case _: energyInjector.BlockModuled.type => world.getTileEntity(x, y, z).asInstanceOf[energyInjector.TEModuled].provideInformation(list)
+		case _: energyInjector.BlockStandalone.type => world.getTileEntity(x, y, z).asInstanceOf[energyInjector.TEStandalone].provideInformation(list)
 		case _ => ()
 	}
 }

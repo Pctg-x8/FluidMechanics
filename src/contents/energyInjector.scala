@@ -19,16 +19,14 @@ package energyInjector
     import net.minecraftforge.fluids._
     import net.minecraft.tileentity.TileEntity
     import net.minecraftforge.common.util.ForgeDirection
+	import net.minecraft.network.NetworkManager
     import net.minecraft.network.play.server.S35PacketUpdateTileEntity
     import net.minecraft.item.ItemStack
-    import com.cterm2.mcfm1710.utils.EntityLivingUtils._
+	import com.cterm2.mcfm1710.utils.EntityLivingUtils._
+	import cpw.mods.fml.common.Optional
+	import com.cterm2.mcfm1710.Fluids
 
     // Common Values
-    final object CommonValues
-    {
-        var renderTypeStandard: Int = 0
-        var renderTypeModuled: Int = 0
-    }
     final object EnergyInjectorSynchronizeDataKeys
     {
     	final val WaterKey = "WaterData"
@@ -60,48 +58,48 @@ package energyInjector
 
         // Overrided Configurations //
         override final val isNormalCube = false
-        var renderType: Int = 0
+		var renderType: Int = 0
         override final def getRenderType = renderType
         override def createNewTileEntity(world: World, meta: Int) =
         {
-            val te = new TileEntityModuled
+            val te = new TEModuled
             te.dir = convertFacingDirection(meta).getOpposite
             te
         }
         override def onBlockPlacedBy(world: World, x: Int, y: Int, z: Int, placer: EntityLivingBase, stack: ItemStack) =
         {
             world.setBlockMetadataWithNotify(x, y, z, placer.facingInt, 2)
-            Option(world.getTileEntity(x, y, z).asInstanceOf[TileEntityModuled]) foreach
+            Option(world.getTileEntity(x, y, z).asInstanceOf[TEModuled]) foreach
             {
                 _.dir = convertFacingDirection(placer.facingInt).getOpposite
             }
         }
     }
     // Standalone
-    final object BlockStandard extends BlockBase
+    final object BlockStandalone extends BlockBase
     {
         // Overrided Configurations //
         var renderType: Int = 0
         override final def getRenderType = renderType
         override def createNewTileEntity(world: World, meta: Int) =
         {
-            val te = new TileEntityStandalone
+            val te = new TEStandalone
             te.dir = convertFacingDirection(meta).getOpposite
             te
         }
         override def onBlockPlacedBy(world: World, x: Int, y: Int, z: Int, placer: EntityLivingBase, stack: ItemStack) =
         {
             world.setBlockMetadataWithNotify(x, y, z, placer.facingInt, 2)
-            Option(world.getTileEntity(x, y, z).asInstanceOf[TileEntityStandalone]) foreach
+            Option(world.getTileEntity(x, y, z).asInstanceOf[TEStandalone]) foreach
             {
-                _.dir = convertFacingDirection(meta).getOpposite
+                _.dir = convertFacingDirection(placer.facingInt).getOpposite
             }
         }
     }
 
     // TileEntity //
     // Energy Injector Tile Entity Base
-    abstract class TileEntityBase(val maxFluidAmount: Int) extends TileEntity with IFluidHandler
+    abstract class TEBase(val maxFluidAmount: Int) extends TileEntity with IFluidHandler
     {
     	tankHolder =>
     	import EnergyInjectorSynchronizeDataKeys._
@@ -116,8 +114,8 @@ package energyInjector
     		// Tank Traits //
     		override def getCapacity = tankHolder.maxFluidAmount
     		override lazy val getInfo = new FluidTankInfo(this)
-    		private[TileEntityBase] def canAccept(fluid: Fluid) = fluid == this.stack.getFluid
-    		private[TileEntityBase] def canAccept(fluid: FluidStack): Boolean = this.canAccept(fluid.getFluid)
+    		private[TEBase] def canAccept(fluid: Fluid) = fluid == this.stack.getFluid
+    		private[TEBase] def canAccept(fluid: FluidStack): Boolean = this.canAccept(fluid.getFluid)
 
     		// Tank Exports //
     		private lazy val stack = new FluidStack(acceptType, 0)
@@ -158,13 +156,13 @@ package energyInjector
     		}
 
     		// Data Synchronizations //
-    		private[TileEntityBase] def synchronizeData =
+    		private[TEBase] def synchronizeData =
     		{
     			val tag = new NBTTagCompound
     			this.stack.writeToNBT(tag)
     			tag
     		}
-    		private[TileEntityBase] def synchronizeDataFrom(tag: NBTTagCompound) =
+    		private[TEBase] def synchronizeDataFrom(tag: NBTTagCompound) =
     		{
     			val newFluid = FluidStack.loadFluidStackFromNBT(tag)
     			if(!this.canAccept(newFluid)) throw new RuntimeException("Restriction Error")
@@ -264,11 +262,12 @@ package energyInjector
     }
 
     // Energy Injector Module Tile Entity
-    final class TileEntityModuled extends TileEntityBase(EnergyInjectorFluidLimits.Module)
+    final class TEModuled extends TEBase(EnergyInjectorFluidLimits.Module)
 
     // Energy Injector Tile Entity
     @Optional.Interface(iface = "mekanism.api.energy.IStrictEnergyAcceptor", modid="Mekanism", striprefs = true)
-    final class TileEntityStandalone extends TileEntityBase(EnergyInjectorFluidLimits.Standalone) with IStrictEnergyAcceptor
+    final class TEStandalone extends TEBase(EnergyInjectorFluidLimits.Standalone)
+		with mekanism.api.energy.IStrictEnergyAcceptor
     {
     	// Energy Acceptor Interacts //
     	override def transferEnergyToAcceptor(side: ForgeDirection, amount: Double) = side match
@@ -283,4 +282,154 @@ package energyInjector
     	override def setEnergy(newValue: Double) = ()
     	override val getMaxEnergy = EnergyInjectorFluidLimits.Standalone.toDouble	// provides max acceptable energy in EnergyAcceptor
     }
+
+	// Renderers //
+	import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer
+	import cpw.mods.fml.client.registry.ISimpleBlockRenderingHandler
+
+	@SideOnly(Side.CLIENT)
+	final class TileEntityRenderer extends TileEntitySpecialRenderer
+	{
+		import net.minecraft.tileentity.TileEntity
+
+		override def renderTileEntityAt(entity: TileEntity, x: Double, y: Double, z: Double, f: Float) =
+		{
+
+		}
+	}
+	@SideOnly(Side.CLIENT)
+	final class BlockRenderer extends ISimpleBlockRenderingHandler
+	{
+		import org.lwjgl.opengl.GL11._
+		import net.minecraft.block.Block, net.minecraft.client.renderer.{RenderBlocks, Tessellator}
+		import net.minecraft.world.IBlockAccess
+
+		override def renderInventoryBlock(block: Block, modelId: Int, meta: Int, renderer: RenderBlocks) =
+		{
+			renderer.setRenderBoundsFromBlock(block)
+			glRotatef(90.0f, 0.0f, 1.0f, 0.0f)
+			glTranslatef(-0.5f, -0.5f, -0.5f)
+			this.renderBlockWithNormals(block, 0.0d, 0.0d, 0.0d, renderer)
+			glTranslatef(0.5f, 0.5f, 0.5f)
+		}
+		override def renderWorldBlock(world: IBlockAccess, x: Int, y: Int, z: Int, block: Block, modelId: Int, renderer: RenderBlocks) =
+		{
+			Tessellator.instance.setColorOpaque_F(1.0f, 1.0f, 1.0f)
+			this.renderBlock(block, world.getBlockMetadata(x, y, z), x.toDouble, y.toDouble, z.toDouble, renderer)
+			false
+		}
+		override def shouldRender3DInInventory(meta: Int) = true
+		override def getRenderId = BlockModuled.renderType
+
+		// Render Codes //
+		private def renderBlock(blk: Block, meta: Int, x: Double, y: Double, z: Double, renderer: RenderBlocks) =
+		{
+			import net.minecraft.init.Blocks._
+
+			val margin = 1.0d / 8.0d
+			val tex = iron_block.getBlockTextureFromSide(0)
+
+			// shrinked render with RenderBlocks
+			def renderShell() =
+			{
+				renderer.renderFaceYNeg(blk, x, y + 1.0d / 256.0d, z, tex)
+				// renderer.renderFaceYPos(blk, x, y - 1.0d / 256.0d, z, tex)
+				renderer.renderMinZ += margin; renderer.renderMaxZ -= margin
+				renderer.renderFaceXNeg(blk, x, y, z, tex)
+				renderer.renderFaceXPos(blk, x, y, z, tex)
+				renderer.renderMinZ -= margin; renderer.renderMaxZ += margin
+				renderer.renderMinX += margin; renderer.renderMaxX -= margin
+				renderer.renderFaceZNeg(blk, x, y, z, tex)
+				renderer.renderFaceZPos(blk, x, y, z, tex)
+				renderer.renderMinX -= margin; renderer.renderMaxX += margin
+				renderer.renderMinX = 0; renderer.renderMaxX = margin
+				renderer.renderFaceZPos(blk, x, y, z - margin, tex)
+				renderer.renderFaceZNeg(blk, x, y, z + margin, tex)
+				renderer.renderMinX = 1.0d - margin; renderer.renderMaxX = 1.0d
+				renderer.renderFaceZPos(blk, x, y, z - margin, tex)
+				renderer.renderFaceZNeg(blk, x, y, z + margin, tex)
+				renderer.renderMinX = 0.0d
+				renderer.renderMinZ = 0; renderer.renderMaxZ = margin
+				renderer.renderFaceXPos(blk, x - margin, y, z, tex)
+				renderer.renderFaceXNeg(blk, x + margin, y, z, tex)
+				renderer.renderMinZ = 1.0d - margin; renderer.renderMaxZ = 1.0d
+				renderer.renderFaceXPos(blk, x - margin, y, z, tex)
+				renderer.renderFaceXNeg(blk, x + margin, y, z, tex)
+				renderer.renderMinZ = 0.0d
+			}
+			renderer.renderFromInside = true; renderShell()
+			renderer.renderFromInside = false; renderShell()
+			// separator
+			if((meta & 0x01) == 0)
+			{
+				renderer.renderFaceXPos(blk, x - 0.5d + 0.5d * margin, y, z, tex)
+				renderer.renderFaceXNeg(blk, x + 0.5d - 0.5d * margin, y, z, tex)
+			}
+			else
+			{
+				renderer.renderFaceZPos(blk, x, y, z - 0.5d + 0.5d * margin, tex)
+				renderer.renderFaceZNeg(blk, x, y, z + 0.5d - 0.5d * margin, tex)
+			}
+		}
+		private def renderBlockWithNormals(blk: Block, x: Double, y: Double, z: Double, renderer: RenderBlocks) =
+		{
+			import net.minecraft.init.Blocks._
+
+			val margin = 1.0d / 8.0d
+			val tex = iron_block.getBlockTextureFromSide(0)
+
+			// shrinked render with RenderBlocks
+			val tess = Tessellator.instance
+			def renderShell() =
+			{
+				tess.startDrawingQuads(); tess.setNormal(0.0f, -1.0f, 0.0f)
+				renderer.renderFaceYNeg(blk, x, y + 1.0d / 256.0d, z, tex)
+				// tess.draw(); tess.startDrawingQuads(); tess.setNormal(0.0f, 1.0f, 0.0f)
+				// renderer.renderFaceYPos(blk, x, y - 1.0d / 256.0d, z, tex)
+				renderer.renderMinZ += margin; renderer.renderMaxZ -= margin
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(-1.0f, 0.0f, 0.0f)
+				renderer.renderFaceXNeg(blk, x, y, z, tex)
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(1.0f, 0.0f, 0.0f)
+				renderer.renderFaceXPos(blk, x, y, z, tex)
+				renderer.renderMinZ -= margin; renderer.renderMaxZ += margin
+				renderer.renderMinX += margin; renderer.renderMaxX -= margin
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(0.0f, 0.0f, -1.0f)
+				renderer.renderFaceZNeg(blk, x, y, z, tex)
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(0.0f, 0.0f, 1.0f)
+				renderer.renderFaceZPos(blk, x, y, z, tex)
+				renderer.renderMinX -= margin; renderer.renderMaxX += margin
+				renderer.renderMinX = 0; renderer.renderMaxX = margin
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(0.0f, 0.0f, 1.0f)
+				renderer.renderFaceZPos(blk, x, y, z - margin, tex)
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(0.0f, 0.0f, -1.0f)
+				renderer.renderFaceZNeg(blk, x, y, z + margin, tex)
+				renderer.renderMinX = 1.0d - margin; renderer.renderMaxX = 1.0d
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(0.0f, 0.0f, 1.0f)
+				renderer.renderFaceZPos(blk, x, y, z - margin, tex)
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(0.0f, 0.0f, -1.0f)
+				renderer.renderFaceZNeg(blk, x, y, z + margin, tex)
+				renderer.renderMinX = 0.0d
+				renderer.renderMinZ = 0; renderer.renderMaxZ = margin
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(1.0f, 0.0f, 0.0f)
+				renderer.renderFaceXPos(blk, x - margin, y, z, tex)
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(-1.0f, 0.0f, 0.0f)
+				renderer.renderFaceXNeg(blk, x + margin, y, z, tex)
+				renderer.renderMinZ = 1.0d - margin; renderer.renderMaxZ = 1.0d
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(1.0f, 0.0f, 0.0f)
+				renderer.renderFaceXPos(blk, x - margin, y, z, tex)
+				tess.draw(); tess.startDrawingQuads(); tess.setNormal(-1.0f, 0.0f, 0.0f)
+				renderer.renderFaceXNeg(blk, x + margin, y, z, tex)
+				tess.draw()
+				renderer.renderMinZ = 0.0d
+			}
+			renderer.renderFromInside = true; renderShell()
+			renderer.renderFromInside = false; renderShell()
+			// separator
+			tess.startDrawingQuads(); tess.setNormal(1.0f, 0.0f, 0.0f)
+			renderer.renderFaceXPos(blk, x - 0.5d + 0.5d * margin, y, z, tex)
+			tess.draw(); tess.startDrawingQuads(); tess.setNormal(-1.0f, 0.0f, 0.0f)
+			renderer.renderFaceXNeg(blk, x + 0.5d - 0.5d * margin, y, z, tex)
+			tess.draw()
+		}
+	}
 }

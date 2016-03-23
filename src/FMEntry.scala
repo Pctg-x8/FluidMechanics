@@ -55,11 +55,10 @@ object FMEntry
 		override def registerRenderers() =
 		{
 			import cpw.mods.fml.client.registry.ClientRegistry
-			import com.cterm2.mcfm1710.tiles._, com.cterm2.mcfm1710.client.renderer._
 
-			Blocks.attachableEnergyInjector.renderType = this.registerBlockRenderer(new attachableEnergyInjector.BlockRenderer)
+			energyInjector.BlockModuled.renderType = this.registerBlockRenderer(new energyInjector.BlockRenderer)
 			sourceGenerator.CommonValues.renderType = this.registerBlockRenderer(new sourceGenerator.BlockRenderer)
-			ClientRegistry.bindTileEntitySpecialRenderer(classOf[TEEnergyInjector], new attachableEnergyInjector.TileEntityRenderer)
+			ClientRegistry.bindTileEntitySpecialRenderer(classOf[energyInjector.TEModuled], new energyInjector.TileEntityRenderer)
 		}
 
 		@inline

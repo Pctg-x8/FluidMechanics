@@ -4,6 +4,7 @@ import interfaces.ISourceGenerator
 
 package thermalGenerator
 {
+	import com.cterm2.mcfm1710.sourceGenerator
     import net.minecraft.world.World
     import net.minecraft.tileentity.{TileEntity => TileEntityBase}
     import net.minecraft.nbt.NBTTagCompound
