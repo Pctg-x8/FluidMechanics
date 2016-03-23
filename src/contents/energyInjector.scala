@@ -1,6 +1,7 @@
 package com.cterm2.mcfm1710
 
 import net.minecraft.nbt.NBTTagCompound
+import cpw.mods.fml.relauncher.{SideOnly, Side}
 
 package interfaces
 {
@@ -11,9 +12,29 @@ package interfaces
     }
 }
 
-package energyInjector
+package object EnergyInjector
 {
-    import cpw.mods.fml.relauncher.{SideOnly, Side}
+	def register(ctab: net.minecraft.creativetab.CreativeTabs) =
+	{
+		ContentRegistry register BlockModuled.setCreativeTab(ctab) as "energyInjector.attachable"
+		ContentRegistry register BlockStandalone.setCreativeTab(ctab) as "energyInjector.standalone"
+		ContentRegistry register classOf[TEModuled] as "TEEnergyInjectorModuled"
+		ContentRegistry register classOf[TEStandalone] as "TEEnergyInjector"
+		ctab
+	}
+	@SideOnly(Side.CLIENT)
+	def registerClient() =
+	{
+		import cpw.mods.fml.client.registry.{RenderingRegistry, ClientRegistry}
+
+		BlockModuled.renderType = RenderingRegistry.getNextAvailableRenderId()
+		RenderingRegistry.registerBlockHandler(BlockModuled.renderType, new BlockRenderer)
+		ClientRegistry.bindTileEntitySpecialRenderer(classOf[TEModuled], new TileEntityRenderer)
+	}
+}
+
+package EnergyInjector
+{
     import net.minecraft.block.BlockContainer, net.minecraft.block.material.Material
     import net.minecraft.world.World, net.minecraft.entity.EntityLivingBase
     import net.minecraftforge.fluids._

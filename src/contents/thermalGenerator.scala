@@ -2,14 +2,23 @@ package com.cterm2.mcfm1710
 
 import interfaces.ISourceGenerator
 
-package thermalGenerator
+package object ThermalGenerator
 {
-	import com.cterm2.mcfm1710.sourceGenerator
+	def register(ctab: net.minecraft.creativetab.CreativeTabs) =
+	{
+		ContentRegistry register Block.setCreativeTab(ctab) as "sourceGenerator.thermal"
+		ContentRegistry register classOf[TileEntity] as "TEThermalGenerator"
+		ctab
+	}
+}
+
+package ThermalGenerator
+{
     import net.minecraft.world.World
     import net.minecraft.tileentity.{TileEntity => TileEntityBase}
     import net.minecraft.nbt.NBTTagCompound
 
-    final object Block extends sourceGenerator.BlockBase
+    final object Block extends SourceGenerator.BlockBase
     {
         // Block Traits //
         override def createNewTileEntity(world: World, meta: Int) = new TileEntity

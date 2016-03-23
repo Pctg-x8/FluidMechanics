@@ -10,12 +10,12 @@ final class GuiHandler extends IGuiHandler
 	override def getServerGuiElement(id: Int, player: EntityPlayer, world: World, x: Int, y: Int, z: Int) =
 		world.getTileEntity(x, y, z) match
 		{
-			case t: assemblyTable.TileEntity => new assemblyTable.Container(world, t, player.inventory)
+			case t: AssemblyTable.TileEntity => new AssemblyTable.Container(world, t, player.inventory)
 		}
 	// Returns and instance of the Gui you made earlier
 	override def getClientGuiElement(id: Int, player: EntityPlayer, world: World, x: Int, y: Int, z: Int) =
 		world.getTileEntity(x, y, z) match
 		{
-			case t: assemblyTable.TileEntity => new assemblyTable.Gui(new assemblyTable.Container(world, t, player.inventory))
+			case t: AssemblyTable.TileEntity => new AssemblyTable.Gui(new AssemblyTable.Container(world, t, player.inventory))
 		}
 }

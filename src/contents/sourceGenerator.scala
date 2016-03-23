@@ -1,5 +1,7 @@
 package com.cterm2.mcfm1710
 
+import cpw.mods.fml.relauncher.{SideOnly, Side}
+
 package interfaces
 {
     import net.minecraft.nbt.NBTTagCompound
@@ -11,11 +13,22 @@ package interfaces
     }
 }
 
+package object SourceGenerator
+{
+	@SideOnly(Side.CLIENT)
+	def registerClient() =
+	{
+		import cpw.mods.fml.client.registry.RenderingRegistry
+
+		CommonValues.renderType = RenderingRegistry.getNextAvailableRenderId
+		RenderingRegistry.registerBlockHandler(CommonValues.renderType, new BlockRenderer)
+	}
+}
+
 // Source Generator Base Classes //
-package sourceGenerator
+package SourceGenerator
 {
     import net.minecraft.block.BlockContainer, net.minecraft.block.material.Material
-    import cpw.mods.fml.relauncher.{SideOnly, Side}
     import cpw.mods.fml.client.registry.ISimpleBlockRenderingHandler
     import net.minecraft.client.renderer.{RenderBlocks, Tessellator}
     import net.minecraft.world.{World, IBlockAccess}
@@ -41,7 +54,6 @@ package sourceGenerator
     // Block Renderer //
     final class BlockRenderer extends ISimpleBlockRenderingHandler
     {
-        import com.cterm2.mcfm1710.Blocks
         import net.minecraft.block.Block
         import net.minecraft.client.renderer.{RenderBlocks, Tessellator}
 
@@ -93,7 +105,11 @@ package sourceGenerator
             renderPole(0.0d, 0.0d, 1.0d, 1.0d) _ andThen startDrawingQuadsWithNormal(0.0f, 1.0f, 0.0f) andThen renderFaceYPos andThen dispatch apply tess
             // Render under 4 poles
             renderer.renderMinY = 0.0d; renderer.renderMaxY = 0.5d
-            Seq(0.0d, 7.0d / 8.0d) flatMap { x => Seq(0.0d, 7.0d / 8.0d) map { z => renderPole(x, z, x + 1.0d / 8.0d, z + 1.0d / 8.0d) _ } } reduceLeft { _ andThen _ } apply tess
+			(for
+			{
+				x <- Seq(0.0d, 7.0d / 8.0d);
+				z <- Seq(0.0d, 7.0d / 8.0d)
+			} yield renderPole(x, z, x + 1.0d / 8.0d, z + 1.0d / 8.0d) _) reduceLeft { _ andThen _ } apply tess
 
             glTranslatef(0.5f, 0.5f, 0.5f)
         }

@@ -1,6 +1,22 @@
 package com.cterm2.mcfm1710
 
-package assemblyTable
+import cpw.mods.fml.relauncher.{Side, SideOnly}
+
+package object AssemblyTable
+{
+	def register(ctab: net.minecraft.creativetab.CreativeTabs) =
+	{
+		ContentRegistry register Item.setCreativeTab(ctab) as "asmTable"
+		ContentRegistry register Block as "assemblyTable_part"
+		ContentRegistry register BlockTopPart as "assemblyTable.top"
+		ContentRegistry register classOf[TileEntity] as "TEAssemblyTable"
+		ctab
+	}
+	@SideOnly(Side.CLIENT)
+	def registerClient() = ()
+}
+
+package AssemblyTable
 {
 	import net.minecraft.item.{ItemStack, Item => ItemBase}, net.minecraft.block.{BlockContainer, Block => BlockBase}
 	import net.minecraft.block.material.Material
@@ -12,7 +28,6 @@ package assemblyTable
 	import com.cterm2.mcfm1710.utils.WorldExtensions._
 	import com.cterm2.mcfm1710.utils.Vector3i
 	import net.minecraft.entity.player.EntityPlayer
-	import cpw.mods.fml.relauncher.{Side, SideOnly}
 	import java.util.Random
 
 	// Common Values/Utils
