@@ -11,11 +11,13 @@ final class GuiHandler extends IGuiHandler
 		world.getTileEntity(x, y, z) match
 		{
 			case t: AssemblyTable.TileEntity => new AssemblyTable.Container(world, t, player.inventory)
+			case t: ThermalGenerator.TileEntity => new ThermalGenerator.Container(t, player.inventory)
 		}
 	// Returns and instance of the Gui you made earlier
 	override def getClientGuiElement(id: Int, player: EntityPlayer, world: World, x: Int, y: Int, z: Int) =
 		world.getTileEntity(x, y, z) match
 		{
 			case t: AssemblyTable.TileEntity => new AssemblyTable.Gui(new AssemblyTable.Container(world, t, player.inventory))
+			case t: ThermalGenerator.TileEntity => new ThermalGenerator.Gui(new ThermalGenerator.Container(t, player.inventory))
 		}
 }

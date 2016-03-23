@@ -3,10 +3,22 @@ package com.cterm2.mcfm1710.utils
 object LocalTranslationUtils
 {
 	// "t" interpolator
-	implicit class TranslatedStringHelper(val s: StringContext) extends AnyVal
+	implicit class TranslatedStringHelper(val context: StringContext) extends AnyVal
 	{
 		import net.minecraft.util.StatCollector
 
-		def t(args: Any*) = StatCollector.translateToLocal(s.parts.iterator.next)
+		def buildActualString(args: Any*) =
+		{
+			val strings = context.parts.iterator
+			val values = args.iterator
+			val buf = new StringBuffer(strings.next)
+			while(strings.hasNext)
+			{
+				buf append values.next
+				buf append strings.next
+			}
+			buf.toString
+		}
+		def t(args: Any*) = buildActualString _ andThen StatCollector.translateToLocal apply args
 	}
 }

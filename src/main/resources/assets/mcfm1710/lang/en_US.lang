@@ -3,11 +3,18 @@ itemGroup.tabFluidMechanics=Fluid Mechanics
 
 # Tile names
 tile.assemblyTable_part.name=Assembly Table
+tile.assemblyTable.top.name=Assembly Table
 tile.energyInjector.attachable.name=Attachable Energy Injector
 tile.energyInjector.standalone.name=Energy Injector
+tile.sourceGenerator.thermal.name=Thermal Generator
 
 # Item names
 item.assemblyTable_caller.name=Assembly Table
 
 # Container labels
 container.assembling=Assembling
+container.sourceGenerator.thermal=Thermal Generator
+
+# Internal container names(for SmartCursor)
+container.asmTable=Working Items on Assembly Table
+container.fuelStack=Fuel Stack

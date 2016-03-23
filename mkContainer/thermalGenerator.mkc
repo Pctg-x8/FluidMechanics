@@ -1,0 +1,14 @@
+# Thermal Generator
+
+surface 176, 166
+
+# fuel stack
+offset 80, 34
+slot 0, 0, 16, 16
+
+# player slot
+offset 8, 84
+slotMatrix 00, 00, 16, 16, 9, 3, 18, 18
+slotMatrix 00, 56, 16, 16, 9, 1, 18, 18
+
+output ../src/main/resources/assets/mcfm1710/textures/guiBase/thermalGenerator.png

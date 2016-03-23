@@ -30,7 +30,6 @@ package SourceGenerator
 {
     import net.minecraft.block.BlockContainer, net.minecraft.block.material.Material
     import cpw.mods.fml.client.registry.ISimpleBlockRenderingHandler
-    import net.minecraft.client.renderer.{RenderBlocks, Tessellator}
     import net.minecraft.world.{World, IBlockAccess}
 
     final object CommonValues

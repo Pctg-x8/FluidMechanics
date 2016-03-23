@@ -1,13 +1,20 @@
-# Creative Tabs
+# クリエイティブタブ名
 itemGroup.tabFluidMechanics=にゃー
 
-# Tile names
+# ブロック名
 tile.assemblyTable_part.name=組立台
+tile.assemblyTable.top.name=組立台
 tile.energyInjector.attachable.name=エネルギー注入モジュール
 tile.energyInjector.standalone.name=エネルギー注入機
+tile.sourceGenerator.thermal.name=熱発電機
 
-# Item names
+# アイテム名
 item.assemblyTable_caller.name=組立台
 
-# Container labels
+# コンテナ(GUI)ラベル名
 container.assembling=組み立て
+container.sourceGenerator.thermal=熱発電機
+
+# 内部コンテナ名(SmartCursor用)
+container.asmTable=作業中のアイテム
+container.fuelStack=燃料スタック
