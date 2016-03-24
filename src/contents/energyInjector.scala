@@ -126,7 +126,7 @@ package EnergyInjector
     	import EnergyInjectorSynchronizeDataKeys._
 
     	// External Values //
-    	var dir: ForgeDirection = ForgeDirection.UNKNOWN
+    	var dir = ForgeDirection.UNKNOWN
 
     	// Make as Combinated Fluid Tanks //
     	// Content restricted fluid tank

@@ -8,6 +8,7 @@ forgeVersion := s"10.13.4.$forgeRevision"
 buildName := s"FluidMechanics-mc1710-134$forgeRevision"
 
 scalaSource in Compile := baseDirectory.value / "src"
+scalaSource in Test := baseDirectory.value / "src" / "test"
 val srcJarVersionSignature = Def.setting { Seq(minecraftVersion.value, forgeVersion.value, minecraftVersion.value).mkString("-") }
 val gradleCaches = file(System.getProperty("user.home")) / ".gradle" / "caches"
 val forgeSources = Def.setting { gradleCaches / "minecraft" / "net" / "minecraftforge" / "forge" / srcJarVersionSignature.value }
@@ -37,7 +38,7 @@ libraryDependencies ++= Seq(
 	"lzma" % "lzma" % "0.0.1",
 	"com.google.code.findbugs" % "jsr305" % "1.3.+",
 	"org.scalactic" %% "scalactic" % "2.2.6",
-	"org.scalatest" %% "scalatest" % "2.2.6" % "test"
+	"org.scalatest" %% "scalatest" % "2.2.6"
 )
 resolvers += "minecraft" at "https://libraries.minecraft.net/"
 

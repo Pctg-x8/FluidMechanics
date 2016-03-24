@@ -24,7 +24,8 @@ package ThermalGenerator
 
 	final object StoreKeys
 	{
-		final val FuelStackKey = "fuelStack"
+		final val FuelStack = "fuelStack"
+		final val BurnTime = "burnTimeLast"
 	}
 
     final object Block extends SourceGenerator.BlockBase
@@ -48,27 +49,30 @@ package ThermalGenerator
 
 		// Internal Data //
 		private var slotItem: Option[ItemStack] = None
+		private var burnTimeLast: Int = 0
 
 		// Data Synchronization //
-        override def storeSpecificData(tag: NBTTagCompound) =
+        override def storeSpecificDataTo(tag: NBTTagCompound) =
         {
-
+			tag.setInteger(StoreKeys.BurnTime, this.burnTimeLast)
+			tag
         }
-        override def loadSpecificData(tag: NBTTagCompound) =
+        override def loadSpecificDataFrom(tag: NBTTagCompound) =
         {
-
+			this.burnTimeLast = tag.getInteger(StoreKeys.BurnTime)
+			tag
         }
 		override def writeToNBT(tag: NBTTagCompound) =
 		{
 			super.writeToNBT(tag)
-			this.storeSpecificData(tag)
-			this.slotItem map { x => { val tag = new NBTTagCompound; x.writeToNBT(tag); tag } } foreach { tag.setTag(StoreKeys.FuelStackKey, _) }
+			this.storeSpecificDataTo(tag)
+			this.slotItem map { x => { val tag = new NBTTagCompound; x.writeToNBT(tag); tag } } foreach { tag.setTag(StoreKeys.FuelStack, _) }
 		}
 		override def readFromNBT(tag: NBTTagCompound) =
 		{
 			super.readFromNBT(tag)
-			this.loadSpecificData(tag)
-			this.slotItem = Option(tag.getTag(StoreKeys.FuelStackKey).asInstanceOf[NBTTagCompound]) map { ItemStack.loadItemStackFromNBT(_) }
+			this.loadSpecificDataFrom(tag)
+			this.slotItem = Option(tag.getTag(StoreKeys.FuelStack).asInstanceOf[NBTTagCompound]) map { ItemStack.loadItemStackFromNBT(_) }
 		}
 
 		// Inventory Configurations //

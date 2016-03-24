@@ -8,8 +8,8 @@ package interfaces
 
     trait ISourceGenerator
     {
-        def storeSpecificData(tag: NBTTagCompound)
-        def loadSpecificData(tag: NBTTagCompound)
+        def storeSpecificDataTo(tag: NBTTagCompound): NBTTagCompound
+        def loadSpecificDataFrom(tag: NBTTagCompound): NBTTagCompound
     }
 }
 
@@ -30,7 +30,6 @@ package SourceGenerator
 {
     import net.minecraft.block.BlockContainer, net.minecraft.block.material.Material
     import cpw.mods.fml.client.registry.ISimpleBlockRenderingHandler
-    import net.minecraft.world.{World, IBlockAccess}
 
     final object CommonValues
     {
@@ -53,7 +52,7 @@ package SourceGenerator
     // Block Renderer //
     final class BlockRenderer extends ISimpleBlockRenderingHandler
     {
-        import net.minecraft.block.Block
+        import net.minecraft.block.Block, net.minecraft.world.IBlockAccess
         import net.minecraft.client.renderer.{RenderBlocks, Tessellator}
 
         override def renderInventoryBlock(block: Block, modelId: Int, meta: Int, renderer: RenderBlocks) =

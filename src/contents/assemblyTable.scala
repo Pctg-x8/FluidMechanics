@@ -158,10 +158,10 @@ package AssemblyTable
 			}
 		// Called when the block is broken
 		override def breakBlock(world: World, x: Int, y: Int, z: Int, block: BlockBase, meta: Int) =
-		{
-			val entity = world.getTileEntity(x, y, z).asInstanceOf[TileEntity]
-			if(entity != null) entity.dropItemsAtRandom(world, x, y, z)
-		}
+			Option(world.getTileEntity(x, y, z).asInstanceOf[TileEntity]) foreach
+			{
+				_.dropItemsAtRandom(world, x, y, z)
+			}
 
 		// Configures //
 		// Configure dropped item
@@ -195,7 +195,7 @@ package AssemblyTable
 	final object BlockTopPart extends BlockBase(Material.rock)
 	{
 		this.setHardness(1.0f)
-		this.applyBlockBounds()
+		this.setBlockBounds(0.0f, 0.0f, 0.0f, 1.0f, 0.5f, 1.0f)
 
 		// Rendering Configurations //
 		override val renderAsNormalBlock = false
@@ -233,7 +233,6 @@ package AssemblyTable
 		override val getMobilityFlag = 2
 		override def getItemDropped(meta: Int, randomizer: Random, quantity: Int) = null
 
-		private def applyBlockBounds() = this.setBlockBounds(0.0f, 0.0f, 0.0f, 1.0f, 0.5f, 1.0f)
 		// illegal adjacents -> break
 		private final def breakOnIllegalAdjacents(world: World, thisPos: Vector3i, pairDir: Vector3i) =
 			if(world.getBlock(thisPos.x + pairDir.x, thisPos.y, thisPos.z + pairDir.z) != this ||
