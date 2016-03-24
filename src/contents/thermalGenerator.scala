@@ -162,7 +162,7 @@ package ThermalGenerator
 				for(x <- this.slotItem)
 				{
 					x.stackSize -= 1
-					if(x.stackSize <= 0) this.slotItem = None
+					if(x.stackSize <= 0) this.slotItem = Option(x.getItem.getContainerItem(x))
 				}
 				this.fullBurnTime = itemBurnTime
 				itemBurnTime
@@ -189,7 +189,7 @@ package ThermalGenerator
 	final class Container(val te: TileEntity, val invPlayer: InventoryPlayer) extends ContainerBase
 	{
 		// initialize slots
-		this.addSlotToContainer(new Slot(te, 0, 80, 34))			// fuel slot
+		this.addSlotToContainer(new Slot(te, 0, 80, 44))			// fuel slot
 		this.addPlayerSlots(invPlayer, 8, 84)
 
 		// Container Configurations //
@@ -256,6 +256,8 @@ package ThermalGenerator
 		{
 			this.mc.getTextureManager.bindTexture(this.backImage)
 			this.drawTexturedModalRect(this.guiLeft, this.guiTop, 0, 0, this.xSize, this.ySize)
+			val burnTextureHeight = (16 - con.te.burnRemainingPercent * 16).asInstanceOf[Int]
+			this.drawTexturedModalRect(this.guiLeft + 80, this.guiTop + 24 + burnTextureHeight, this.xSize, burnTextureHeight, 16, 16)
 		}
 	}
 }

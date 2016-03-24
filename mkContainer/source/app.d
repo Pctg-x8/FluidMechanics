@@ -12,16 +12,39 @@ void main(string[] args)
 		writeln("Container backimage factory.");
 	}
 
-	auto pixels = new float[256 * 256 * 3].sliced(256, 256, 3);
+	auto pixels = new float[256 * 256 * 4].sliced(256, 256, 4);
 	int currentOffsetX = 0, currentOffsetY = 0;
 
+	auto stampFire =
+	[
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 1, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 1, 1, 2, 1, 1, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 1, 2, 1, 1, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 1, 1, 2, 2, 1, 1, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 1, 1, 1, 2, 2, 1, 1, 1, 0, 0, 0, 0,
+		0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 1, 1, 0, 0, 0, 0,
+		0, 0, 0, 1, 1, 2, 2, 3, 2, 2, 2, 1, 1, 0, 0, 0,
+		0, 0, 0, 1, 2, 2, 2, 3, 3, 2, 2, 2, 1, 0, 0, 0,
+		0, 0, 0, 1, 2, 2, 3, 3, 3, 3, 2, 2, 1, 0, 0, 0,
+		0, 0, 0, 0, 1, 2, 2, 3, 3, 2, 2, 1, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 1, 2, 2, 2, 2, 1, 0, 0, 0, 0, 0
+	].sliced(16, 16);
+	immutable stampFireColors = [[1.0f, 0.0f, 0.0f], [1.0f, 0.5f, 0.0f], [1.0f, 0.75f, 0.0f]];
+
+	bool fireStamped = false;
+	int generateTexturesX, generateTexturesY;
 	void placeSlot(int x, int y, int w, int h)
 	{
-		pixels[y .. y + h, x .. x + w, 0 .. $] = 0.75f * 0.875f;
-		pixels[y - 1, x - 1 .. x + w + 1, 0 .. $] = 0.75f * 0.6875f;
-		pixels[y .. y + h + 1, x - 1, 0 .. $] = 0.75f * 0.6875f;
-		pixels[y + h, x - 1 .. x + w + 1, 0 .. $] = 0.75f * 1.125f;
-		pixels[y - 1 .. y + h, x + w, 0 .. $] = 0.75f * 1.125f;
+		pixels[y .. y + h, x .. x + w, 0 .. 3] = 0.75f * 0.875f;
+		pixels[y - 1, x - 1 .. x + w + 1, 0 .. 3] = 0.75f * 0.6875f;
+		pixels[y .. y + h + 1, x - 1, 0 .. 3] = 0.75f * 0.6875f;
+		pixels[y + h, x - 1 .. x + w + 1, 0 .. 3] = 0.75f * 1.125f;
+		pixels[y - 1 .. y + h, x + w, 0 .. 3] = 0.75f * 1.125f;
 	}
 	immutable void delegate(const string[])[string] instructionProcessors =
 	[
@@ -30,25 +53,30 @@ void main(string[] args)
 			immutable w = args[0].to!int, h = args[1].to!int;
 
 			writeln("initializing surface with size ", w, "x", h);
-			pixels[] = cast(ubyte)0xff;
-			pixels[0 .. h, 0 .. w, 0 .. $] = 0.75f;
+			pixels[0 .. $, 0 .. $, 0 .. 3] = 1.0f;
+			pixels[0 .. $, 0 .. $, 3] = 0.0f;
+			pixels[0 .. h, 0 .. w, 0 .. 3] = 0.75f;
+			pixels[0 .. h, 0 .. w, 3] = 1.0f;
 			// horizontal lighting
-			pixels[0, 0 .. w, 0 .. $] *= 1.125f;
-			pixels[1, 0 .. w - 1, 0 .. $] *= 1.125f;
+			pixels[0, 0 .. w, 0 .. 3] *= 1.125f;
+			pixels[1, 0 .. w - 1, 0 .. 3] *= 1.125f;
 			// vertical lighting
-			pixels[2 .. h, 0, 0 .. $] *= 1.125f;
-			pixels[2 .. h - 1, 1, 0 .. $] *= 1.125f;
+			pixels[2 .. h, 0, 0 .. 3] *= 1.125f;
+			pixels[2 .. h - 1, 1, 0 .. 3] *= 1.125f;
 			// horizontal shadowing
-			pixels[h - 1, 0 .. w, 0 .. $] *= 0.6875f;
-			pixels[h - 2, 1 .. w, 0 .. $] *= 0.6875f;
+			pixels[h - 1, 0 .. w, 0 .. 3] *= 0.6875f;
+			pixels[h - 2, 1 .. w, 0 .. 3] *= 0.6875f;
 			// vertical shadowing
-			pixels[0 .. h - 2, w - 1, 0 .. $] *= 0.6875f;
-			pixels[1 .. h - 2, w - 2, 0 .. $] *= 0.6875f;
+			pixels[0 .. h - 2, w - 1, 0 .. 3] *= 0.6875f;
+			pixels[1 .. h - 2, w - 2, 0 .. 3] *= 0.6875f;
 			// effect
 			foreach(x; 0 .. w) foreach(y; 0 .. h)
 			{
-				pixels[y, x, 0 .. $] *= noise.turbulence(x, y, 4) * 0.09375 + 0.90625;
+				pixels[y, x, 0 .. 3] *= noise.turbulence(x, y, 4) * 0.09375 + 0.90625;
 			}
+			// initialize flags
+			fireStamped = false;
+			generateTexturesX = w; generateTexturesY = 0;
 		},
 		"slot": (const string[] args)
 		{
@@ -83,6 +111,24 @@ void main(string[] args)
 				pixels[y + 3 + i .. y + 13 - i, x + 13 + i, 0 .. $] *= 0.875f;
 			}
 		},
+		"fire": (const string[] args)
+		{
+			// fire x, y
+			immutable x = currentOffsetX + args[0].to!int, y = currentOffsetY + args[1].to!int;
+
+			foreach(xo; 0 .. 16) foreach(yo; 0 .. 16) if(stampFire[yo, xo] != 0) pixels[y + yo, x + xo, 0 .. 3] *= 0.875f;
+			if(!fireStamped)
+			{
+				// generated colored fire
+				foreach(xo; 0 .. 16) foreach(yo; 0 .. 16) if(stampFire[yo, xo] != 0)
+				{
+					pixels[generateTexturesY + yo, generateTexturesX + xo, 0 .. 3] = stampFireColors[stampFire[yo, xo] - 1][0 .. 3];
+					pixels[generateTexturesY + yo, generateTexturesX + xo, 3] = 1.0f;
+				}
+				fireStamped = true;
+				generateTexturesY += 16;
+			}
+		},
 		"offset": (const string[] args)
 		{
 			currentOffsetX = args[0].to!int;
@@ -91,13 +137,13 @@ void main(string[] args)
 		"output": (const string[] args)
 		{
 			writeln("writing to ", args[0], "...");
-			auto write_data = new ubyte[256 * 256 * 3];
+			auto write_data = new ubyte[256 * 256 * 4];
 			write_data[] = (&pixels[0, 0, 0])[0 .. pixels.elementsCount].map!(x => cast(ubyte)(x.clamp(0.0f, 1.0f) * 255.0f)).array;
 			/*for(i, pixel_f; (&pixels[0, 0, 0])[0 .. pixels.elementsCount])
 			{
 				write_data[i] = cast(ubyte)(pixel_f.clamp(0.0f, 1.0f) * 255.0f);
 			}*/
-			write_image(args[0], 256, 256, write_data, ColFmt.RGB);
+			write_image(args[0], 256, 256, write_data, ColFmt.RGBA);
 		}
 	];
 

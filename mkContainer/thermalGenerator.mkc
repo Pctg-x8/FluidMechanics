@@ -3,8 +3,9 @@
 surface 176, 166
 
 # fuel stack
-offset 80, 34
+offset 80, 44
 slot 0, 0, 16, 16
+fire 0, -20
 
 # player slot
 offset 8, 84
