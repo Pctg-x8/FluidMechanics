@@ -2,6 +2,7 @@ package com.cterm2.mcfm1710
 
 import net.minecraft.nbt.NBTTagCompound
 import cpw.mods.fml.relauncher.{SideOnly, Side}
+import interops.smartcursor._
 
 package interfaces
 {
@@ -120,7 +121,8 @@ package EnergyInjector
 
     // TileEntity //
     // Energy Injector Tile Entity Base
-    abstract class TEBase(val maxFluidAmount: Int) extends TileEntity with IFluidHandler
+	@Optional.Interface(iface="com.cterm2.mcfm1710.interops.smartcursor.IInformationProvider", modid=SCModuleConnector.ID, striprefs=true)
+    abstract class TEBase(val maxFluidAmount: Int) extends TileEntity with IFluidHandler with IInformationProvider
     {
     	tankHolder =>
     	import EnergyInjectorSynchronizeDataKeys._
@@ -274,7 +276,7 @@ package EnergyInjector
     	}
 
     	// Information Provider //
-    	def provideInformation(list: java.util.List[String]) =
+    	final override def provideInformation(list: java.util.List[String]) =
     	{
     		list add s"Facing on ${this.dir}"
     		list add s"Input(Water) Tank amount: ${this.waterTank.getFluidAmount} mb"

@@ -29,11 +29,16 @@ class BlockInformationProvider extends IBlockProcessor
 	override val getModuleName = "Fluid Mechanics"
 	override val getAuthor = "S.Percentage"
 
-	import com.cterm2.mcfm1710.EnergyInjector
-	override def process(list: java.util.List[String], block: Block, meta: Int, world: World, x: Int, y: Int, z: Int) = block match
-	{
-		case EnergyInjector.BlockModuled => world.getTileEntity(x, y, z).asInstanceOf[EnergyInjector.TEModuled].provideInformation(list)
-		case EnergyInjector.BlockStandalone => world.getTileEntity(x, y, z).asInstanceOf[EnergyInjector.TEStandalone].provideInformation(list)
-		case _ => ()
-	}
+	override def process(list: java.util.List[String], block: Block, meta: Int, world: World, x: Int, y: Int, z: Int) =
+		world.getTileEntity(x, y, z) match
+		{
+			case ip: IInformationProvider => ip.provideInformation(list)
+			case _ => ()
+		}
+}
+
+// Tile as Information Provider
+trait IInformationProvider
+{
+	def provideInformation(list: java.util.List[String]): Unit
 }

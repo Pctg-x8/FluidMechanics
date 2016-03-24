@@ -1,6 +1,7 @@
 package com.cterm2.mcfm1710
 
 import interfaces.ISourceGenerator
+import interops.smartcursor._
 import cpw.mods.fml.relauncher.{SideOnly, Side}
 
 package object ThermalGenerator
@@ -21,11 +22,13 @@ package ThermalGenerator
 	import net.minecraft.inventory.IInventory
 	import net.minecraft.item.ItemStack
 	import net.minecraft.entity.player.EntityPlayer
+	import cpw.mods.fml.common.Optional
 
 	final object StoreKeys
 	{
 		final val FuelStack = "fuelStack"
 		final val BurnTime = "burnTimeLast"
+		final val FullBurnTime = "burnTimeFull"
 	}
 
     final object Block extends SourceGenerator.BlockBase
@@ -43,36 +46,48 @@ package ThermalGenerator
 			}
     }
 
-    final class TileEntity extends TileEntityBase with ISourceGenerator with IInventory
+	@Optional.Interface(iface="com.cterm2.mcfm1710.interops.smartcursor.IInformationProvider", modid=SCModuleConnector.ID, striprefs=true)
+    final class TileEntity extends TileEntityBase with ISourceGenerator with IInventory with IInformationProvider
     {
 		import net.minecraft.tileentity.TileEntityFurnace
+		import net.minecraft.network.play.server.S35PacketUpdateTileEntity
+		import net.minecraft.network.NetworkManager
 
 		// Internal Data //
 		private var slotItem: Option[ItemStack] = None
-		private var burnTimeLast: Int = 0
+		private var burnTimeLast = 0
+		private var fullBurnTime = 0
 
 		// Data Synchronization //
-        override def storeSpecificDataTo(tag: NBTTagCompound) =
+        override final def storeSpecificDataTo(tag: NBTTagCompound) =
         {
-			tag.setInteger(StoreKeys.BurnTime, this.burnTimeLast)
+			tag.setShort(StoreKeys.BurnTime, this.burnTimeLast.asInstanceOf[Short])
+			tag.setShort(StoreKeys.FullBurnTime, this.fullBurnTime.asInstanceOf[Short])
+			this.slotItem map { x => { val tag = new NBTTagCompound; x.writeToNBT(tag); tag } } foreach { tag.setTag(StoreKeys.FuelStack, _) }
 			tag
         }
-        override def loadSpecificDataFrom(tag: NBTTagCompound) =
+        override final def loadSpecificDataFrom(tag: NBTTagCompound) =
         {
-			this.burnTimeLast = tag.getInteger(StoreKeys.BurnTime)
+			this.burnTimeLast = Option(tag.getShort(StoreKeys.BurnTime).asInstanceOf[Int]) getOrElse 0
+			this.fullBurnTime = Option(tag.getShort(StoreKeys.FullBurnTime).asInstanceOf[Int]) getOrElse 0
+			this.slotItem = Option(tag.getTag(StoreKeys.FuelStack).asInstanceOf[NBTTagCompound]) map { ItemStack.loadItemStackFromNBT(_) }
 			tag
         }
-		override def writeToNBT(tag: NBTTagCompound) =
+		override final def writeToNBT(tag: NBTTagCompound)
 		{
 			super.writeToNBT(tag)
 			this.storeSpecificDataTo(tag)
-			this.slotItem map { x => { val tag = new NBTTagCompound; x.writeToNBT(tag); tag } } foreach { tag.setTag(StoreKeys.FuelStack, _) }
 		}
-		override def readFromNBT(tag: NBTTagCompound) =
+		override final def readFromNBT(tag: NBTTagCompound)
 		{
 			super.readFromNBT(tag)
 			this.loadSpecificDataFrom(tag)
-			this.slotItem = Option(tag.getTag(StoreKeys.FuelStack).asInstanceOf[NBTTagCompound]) map { ItemStack.loadItemStackFromNBT(_) }
+		}
+		override final def getDescriptionPacket =
+			this.storeSpecificDataTo _ andThen (new S35PacketUpdateTileEntity(this.xCoord, this.yCoord, this.zCoord, 1, _)) apply (new NBTTagCompound)
+		override final def onDataPacket(net: NetworkManager, packet: S35PacketUpdateTileEntity)
+		{
+			((_: S35PacketUpdateTileEntity).func_148857_g) andThen this.loadSpecificDataFrom apply packet
 		}
 
 		// Inventory Configurations //
@@ -126,6 +141,43 @@ package ThermalGenerator
 		}
 		override final def openInventory() = ()
 		override final def closeInventory() = ()
+
+		// TileEntity Ticking //
+		override final val canUpdate = true
+		override final def updateEntity()
+		{
+			val updateChecker = this.burnTimeLast
+			this.burnTimeLast = if(this.burnTimeLast > 0) this.processBurn() else this.useNextFuel()
+			if(this.burnTimeLast != updateChecker)
+			{
+				this.worldObj.markBlockForUpdate(this.xCoord, this.yCoord, this.zCoord)
+				this.markDirty()
+			}
+		}
+		private def processBurn() = this.burnTimeLast - 1
+		private def useNextFuel() = this.slotItem map { TileEntityFurnace.getItemBurnTime _ } map
+		{
+			case itemBurnTime if itemBurnTime > 0 =>
+			{
+				for(x <- this.slotItem)
+				{
+					x.stackSize -= 1
+					if(x.stackSize <= 0) this.slotItem = None
+				}
+				this.fullBurnTime = itemBurnTime
+				itemBurnTime
+			}
+			case _ => 0
+		} getOrElse 0
+		def burnRemainingPercent = if(this.fullBurnTime <= 0) 0.0 else this.burnTimeLast.toDouble / this.fullBurnTime
+
+		// Information Provider //
+		override final def provideInformation(list: java.util.List[String])
+		{
+			for(slot <- this.slotItem) list add s"Stacking ${slot.getItem.getItemStackDisplayName(slot)}x${slot.stackSize}"
+			val burnTimePercent = (this.burnRemainingPercent * 100.0).asInstanceOf[Int]
+			list add s"Last BurnTime: $burnTimeLast tick(s) [${burnTimePercent}%]"
+		}
     }
 
 	// Container and Gui //
@@ -192,7 +244,7 @@ package ThermalGenerator
 		val backImage = new ResourceLocation(FMEntry.ID, "textures/guiBase/thermalGenerator.png")
 
 		// Draw GUI Foreground Layer(caption layer)
-		override final def drawGuiContainerForegroundLayer(p1: Int, p2: Int) =
+		override final def drawGuiContainerForegroundLayer(p1: Int, p2: Int)
 		{
 			val caption = t"container.sourceGenerator.thermal"
 			val capWidth = this.fontRendererObj.getStringWidth(caption)
@@ -200,7 +252,7 @@ package ThermalGenerator
 			this.fontRendererObj.drawString(t"container.inventory", 8, 72, 0x404040)
 		}
 		// Draw GUI Background Layer(backimage layer)
-		override final def drawGuiContainerBackgroundLayer(p1: Float, p2: Int, p3: Int) =
+		override final def drawGuiContainerBackgroundLayer(p1: Float, p2: Int, p3: Int)
 		{
 			this.mc.getTextureManager.bindTexture(this.backImage)
 			this.drawTexturedModalRect(this.guiLeft, this.guiTop, 0, 0, this.xSize, this.ySize)

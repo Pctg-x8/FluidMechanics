@@ -11,7 +11,7 @@
 	  "credits": "",
 	  "logoFile": "",
 	  "screenshots": [],
-	  "dependencies": [""]
+	  "dependencies": ["mcfm1710#SmartCursorModuleConnector"]
 	},
 	{
 		"modid": "mcfm1710#SmartCursorModuleConnector",
@@ -25,6 +25,6 @@
 	  	"credits": "",
 	  	"logoFile": "",
 	  	"screenshots": [],
-	  	"dependencies": ["mcfm1710", "SmartCursor"]
+	  	"dependencies": [SmartCursor"]
 	}
 ]
