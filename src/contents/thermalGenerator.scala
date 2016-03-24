@@ -23,12 +23,18 @@ package ThermalGenerator
 	import net.minecraft.item.ItemStack
 	import net.minecraft.entity.player.EntityPlayer
 	import cpw.mods.fml.common.Optional
+	import utils.WorldExtensions._
 
 	final object StoreKeys
 	{
 		final val FuelStack = "fuelStack"
 		final val BurnTime = "burnTimeLast"
 		final val FullBurnTime = "burnTimeFull"
+	}
+	final object ProgressBar
+	{
+		final val BurnTime = 0
+		final val FullBurnTime = 1
 	}
 
     final object Block extends SourceGenerator.BlockBase
@@ -38,10 +44,10 @@ package ThermalGenerator
 
 		// Block Interacts //
 		override def onBlockActivated(world: World, x: Int, y: Int, z: Int, player: EntityPlayer, side: Int, xo: Float, yo: Float, zo: Float) =
-			(world.isRemote, world.getTileEntity(x, y, z).asInstanceOf[TileEntity]) match
+			(world.inClientSide, world.getTileEntity(x, y, z).asInstanceOf[TileEntity]) match
 			{
 				case (true, _) => true
-				case (false, tile) => { player.openGui(FMEntry, 0, world, x, y, z); true }
+				case (false, tile) if tile != null => { player.openGui(FMEntry, 0, world, x, y, z); true }
 				case _ => false
 			}
     }
@@ -52,11 +58,12 @@ package ThermalGenerator
 		import net.minecraft.tileentity.TileEntityFurnace
 		import net.minecraft.network.play.server.S35PacketUpdateTileEntity
 		import net.minecraft.network.NetworkManager
+		import utils.EntityLivingUtils._
 
 		// Internal Data //
 		private var slotItem: Option[ItemStack] = None
-		private var burnTimeLast = 0
-		private var fullBurnTime = 0
+		var burnTimeLast = 0
+		var fullBurnTime = 0
 
 		// Data Synchronization //
         override final def storeSpecificDataTo(tag: NBTTagCompound) =
@@ -83,27 +90,24 @@ package ThermalGenerator
 			super.readFromNBT(tag)
 			this.loadSpecificDataFrom(tag)
 		}
-		override final def getDescriptionPacket =
+		/*override final def getDescriptionPacket =
 			this.storeSpecificDataTo _ andThen (new S35PacketUpdateTileEntity(this.xCoord, this.yCoord, this.zCoord, 1, _)) apply (new NBTTagCompound)
 		override final def onDataPacket(net: NetworkManager, packet: S35PacketUpdateTileEntity)
 		{
 			((_: S35PacketUpdateTileEntity).func_148857_g) andThen this.loadSpecificDataFrom apply packet
-		}
+		}*/
 
 		// Inventory Configurations //
 		override final val getSizeInventory = 1
 		override final val getInventoryName = "container.fuelStack"
 		override final val hasCustomInventoryName = false
 		override final val getInventoryStackLimit = 64
-		override final def isUseableByPlayer(player: EntityPlayer) =
-			if(this.worldObj.getTileEntity(this.xCoord, this.yCoord, this.zCoord) != this) false
-			else player.getDistanceSq(this.xCoord.toDouble + 0.5d, this.yCoord.toDouble + 0.5d, this.zCoord.toDouble + 0.5d) <= 64.0d
-		override final def isItemValidForSlot(index: Int, stack: ItemStack) =
-			index == 0 && TileEntityFurnace.getItemBurnTime(stack) > 0
+		override final def isUseableByPlayer(player: EntityPlayer) = player isUseable this
+		override final def isItemValidForSlot(index: Int, stack: ItemStack) = index == 0 && TileEntityFurnace.getItemBurnTime(stack) > 0
 
 		private final def limitStack(stack: Option[ItemStack]) = stack map
 		{
-			x => if(x.stackSize > this.getInventoryStackLimit) new ItemStack(x.getItem(), this.getInventoryStackLimit, x.getItemDamage())
+			x => if(x.stackSize > this.getInventoryStackLimit) new ItemStack(x.getItem, this.getInventoryStackLimit, x.getItemDamage)
 			else x
 		}
 
@@ -123,8 +127,7 @@ package ThermalGenerator
 			}
 			case _ => null
 		}
-		override final def setInventorySlotContents(index: Int, stack: ItemStack) =
-			if(index == 0) this.slotItem = this.limitStack(Option(stack))
+		override final def setInventorySlotContents(index: Int, stack: ItemStack) = if(index == 0) this.slotItem = this.limitStack(Option(stack))
 		override final def decrStackSize(index: Int, amount: Int) = (index, this.slotItem) match
 		{
 			case (0, Some(s)) =>
@@ -143,32 +146,35 @@ package ThermalGenerator
 		override final def closeInventory() = ()
 
 		// TileEntity Ticking //
-		override final val canUpdate = true
 		override final def updateEntity()
 		{
-			val updateChecker = this.burnTimeLast
 			this.burnTimeLast = if(this.burnTimeLast > 0) this.processBurn() else this.useNextFuel()
-			if(this.burnTimeLast != updateChecker)
-			{
-				this.worldObj.markBlockForUpdate(this.xCoord, this.yCoord, this.zCoord)
-				this.markDirty()
-			}
 		}
 		private def processBurn() = this.burnTimeLast - 1
-		private def useNextFuel() = this.slotItem map { TileEntityFurnace.getItemBurnTime _ } map
+		private def useNextFuel() = (this.worldObj.inClientSide, this.slotItem) match
 		{
-			case itemBurnTime if itemBurnTime > 0 =>
+			case (true, _) => 0
+			case (false, Some(item)) =>
 			{
-				for(x <- this.slotItem)
+				val burnTimeNext = TileEntityFurnace.getItemBurnTime(item)
+				if(burnTimeNext > 0)
 				{
-					x.stackSize -= 1
-					if(x.stackSize <= 0) this.slotItem = Option(x.getItem.getContainerItem(x))
+					item.stackSize -= 1
+					if(item.stackSize <= 0) this.slotItem = Option(item.getItem.getContainerItem(item))
+					this.markDirty()
+					this.fullBurnTime = burnTimeNext
+					burnTimeNext
 				}
-				this.fullBurnTime = itemBurnTime
-				itemBurnTime
+				else { unlitBlock(); 0 }
 			}
-			case _ => 0
-		} getOrElse 0
+			case _ => { unlitBlock(); 0 }
+		}
+		private def unlitBlock()
+		{
+			// Unlit block(actual all fuels burned?)
+			this.worldObj.markBlockForUpdate(this.xCoord, this.yCoord, this.zCoord)
+			this.markDirty()
+		}
 		def burnRemainingPercent = if(this.fullBurnTime <= 0) 0.0 else this.burnTimeLast.toDouble / this.fullBurnTime
 
 		// Information Provider //
@@ -181,61 +187,64 @@ package ThermalGenerator
     }
 
 	// Container and Gui //
-	import net.minecraft.inventory.{Container => ContainerBase, Slot}
+	import net.minecraft.inventory.Slot
 	import net.minecraft.entity.player.InventoryPlayer
 	import net.minecraft.client.gui.inventory.GuiContainer
 	import net.minecraft.util.ResourceLocation
 	import com.cterm2.mcfm1710.utils.LocalTranslationUtils._
-	final class Container(val te: TileEntity, val invPlayer: InventoryPlayer) extends ContainerBase
+	final class Container(val te: TileEntity, val invPlayer: InventoryPlayer) extends Generics.Container
 	{
+		import utils.EntityLivingUtils._
+		import net.minecraft.inventory.ICrafting
+		import collection.JavaConversions._
+
 		// initialize slots
 		this.addSlotToContainer(new Slot(te, 0, 80, 44))			// fuel slot
-		this.addPlayerSlots(invPlayer, 8, 84)
+		val (playerSlotStart, playerHotbarSlotStart, playerSlotEnd) = this.addPlayerSlots(invPlayer, 8, 84)
 
 		// Container Configurations //
 		// can container interact with the player
-		override def canInteractWith(player: EntityPlayer) = te isUseableByPlayer player
+		override def canInteractWith(player: EntityPlayer) = player isUseable te
 
 		// Container Interacts //
-		// Transfer stack between slot with shortcut(shift-clicking)
-		override def transferStackInSlot(player: EntityPlayer, slotIndex: Int) =
-			Option(this.inventorySlots.get(slotIndex).asInstanceOf[Slot]) map
-			{
-				case slotObject if slotObject.getHasStack =>
-				{
-					// available slot and contains item
-					val slotStack = slotObject.getStack
-					val stackOld = slotStack.copy
-
-					(slotIndex match
-					{
-						// fuel slot -> player slot
-						case 0 => this.mergeItemStack(slotStack, 1, 1 + 9 * 4, false)
-						case n if 1 until (1 + 9 * 3) contains n => this.mergeItemStack(slotStack, 1 + 9 * 3, 1 + 9 * 4, false)
-						case _ => this.mergeItemStack(slotStack, 1, 1 + 9 * 3, false)
-					}) match
-					{
-						case true =>
-						{
-							// raise slotChanged event or clear slot content
-							if(slotStack.stackSize == 0) slotObject.putStack(null) else slotObject.onSlotChanged()
-							if(slotStack.stackSize == stackOld.stackSize) null else
-							{
-								// Transferred(raise picked-up event)
-								slotObject.onPickupFromSlot(player, slotStack)
-								stackOld
-							}
-						}
-						case _ => null
-					}
-				}
-				case _ => null
-			} getOrElse null
-
-		def addPlayerSlots(invPlayer: InventoryPlayer, left: Int, top: Int) =
+		override def mergeStackInTransferring(stack: ItemStack, index: Int) = index match
 		{
-			for(i <- 0 until 3; j <- 0 until 9) this.addSlotToContainer(new Slot(invPlayer, 9 + j + i * 9, left + j * 18, top + i * 18))
-			for(j <- 0 until 9) this.addSlotToContainer(new Slot(invPlayer, j, left + j * 18, top + 3 * 18 + 2))
+			// fuel slot -> player slot
+			case 0 => this.mergeItemStack(stack, playerSlotStart, playerSlotEnd, false)
+			case n if playerSlotStart until playerHotbarSlotStart contains n => this.mergeItemStack(stack, playerHotbarSlotStart, playerSlotEnd, false)
+			case _ => this.mergeItemStack(stack, playerSlotStart, playerHotbarSlotStart, false)
+		}
+
+		// Container Interacts with Crafters //
+		var lastBurnTimeLast = this.te.burnTimeLast
+		var lastFullBurnTime = this.te.fullBurnTime
+		override def addCraftingToCrafters(crafter: ICrafting)
+		{
+			super.addCraftingToCrafters(crafter)
+			// initial syncing
+			crafter.sendProgressBarUpdate(this, ProgressBar.BurnTime, this.te.burnTimeLast)
+			crafter.sendProgressBarUpdate(this, ProgressBar.FullBurnTime, this.te.fullBurnTime)
+			this.lastBurnTimeLast = this.te.burnTimeLast
+			this.lastFullBurnTime = this.te.fullBurnTime
+		}
+		override def detectAndSendChanges()
+		{
+			super.detectAndSendChanges()
+
+			for(crafter <- this.crafters map { _.asInstanceOf[ICrafting] })
+			{
+				if(this.te.burnTimeLast != this.lastBurnTimeLast) crafter.sendProgressBarUpdate(this, ProgressBar.BurnTime, this.te.burnTimeLast)
+				if(this.te.fullBurnTime != this.lastFullBurnTime) crafter.sendProgressBarUpdate(this, ProgressBar.FullBurnTime, this.te.fullBurnTime)
+			}
+			this.lastBurnTimeLast = this.te.burnTimeLast
+			this.lastFullBurnTime = this.te.fullBurnTime
+		}
+		// receiver
+		@SideOnly(Side.CLIENT)
+		override def updateProgressBar(index: Int, value: Int) = index match
+		{
+			case ProgressBar.BurnTime => this.te.burnTimeLast = value
+			case ProgressBar.FullBurnTime => this.te.fullBurnTime = value
 		}
 	}
 	@SideOnly(Side.CLIENT)
