@@ -99,16 +99,60 @@ void main(string[] args)
 				}
 			}
 		},
+		"tank": (const string[] args)
+		{
+			enum TankOrientation
+			{
+				Vertical = "vertical", Horizontal = "horizontal"
+			}
+			// tank startX, startY, w, h, orientation, meterInterval, largeMeterInterval, hasMeterEitherSide
+			immutable startX = currentOffsetX + args[0].to!int, startY = currentOffsetY + args[1].to!int;
+			immutable w = args[2].to!int, h = args[3].to!int, orientation = cast(TankOrientation)args[4];
+			immutable meterInterval = args[5].to!int, largeMeterInterval = args[6].to!int, hasMeterEitherSide = args[7] == "true";
+
+			placeSlot(startX, startY, w, h);
+			final switch(orientation)
+			{
+			case TankOrientation.Vertical:
+				for(int y = startY + h - meterInterval, count=1; y >= startY; y -= meterInterval, count++)
+				{
+					if(count >= largeMeterInterval) count = 0;
+					immutable meterLength = count == 0 ? 6 : 4;
+					pixels[y, startX + w - meterLength .. startX + w, 0 .. 3] *= 0.375f;
+					pixels[y, startX + w - meterLength .. startX + w, 2] *= 1.5f;
+					if(hasMeterEitherSide)
+					{
+						pixels[y, startX .. startX + meterLength, 0 .. 3] *= 0.375f;
+						pixels[y, startX .. startX + meterLength, 2] *= 1.5f;
+					}
+				}
+				break;
+			case TankOrientation.Horizontal:
+				for(int x = startX + w - meterInterval, count=1; x >= startX; x -= meterInterval, count++)
+				{
+					if(count >= largeMeterInterval) count = 0;
+					immutable meterLength = count == 0 ? 6 : 4;
+					pixels[startY + h - meterLength .. startY + h, x, 0 .. 3] *= 0.375f;
+					pixels[startY + h - meterLength .. startY + h, x, 2] *= 1.5f;
+					if(hasMeterEitherSide)
+					{
+						pixels[startY .. startY + meterLength, x, 0 .. 3] *= 0.375f;
+						pixels[startY .. startY + meterLength, x, 2] *= 1.5f;
+					}
+				}
+				break;
+			}
+		},
 		"arrow": (const string[] args)
 		{
 			// arrow x, y
 			immutable x = currentOffsetX + args[0].to!int, y = currentOffsetY + args[1].to!int;
 
-			pixels[y + 6 .. y + 10, x .. x + 10, 0 .. $] *= 0.875f;
-			pixels[y + 2 .. y + 14, x + 10 .. x + 13, 0 .. $] *= 0.875f;
+			pixels[y + 6 .. y + 10, x .. x + 10, 0 .. 3] *= 0.875f;
+			pixels[y + 2 .. y + 14, x + 10 .. x + 13, 0 .. 3] *= 0.875f;
 			for(int i = 0; i < 5; i++)
 			{
-				pixels[y + 3 + i .. y + 13 - i, x + 13 + i, 0 .. $] *= 0.875f;
+				pixels[y + 3 + i .. y + 13 - i, x + 13 + i, 0 .. 3] *= 0.875f;
 			}
 		},
 		"fire": (const string[] args)

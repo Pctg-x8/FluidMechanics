@@ -7,6 +7,7 @@ tile.assemblyTable.top.name=Assembly Table
 tile.energyInjector.attachable.name=Attachable Energy Injector
 tile.energyInjector.standalone.name=Energy Injector
 tile.sourceGenerator.thermal.name=Thermal Generator
+tile.sourceGenerator.thermalFluid.name=Thermal Fluid Generator
 
 # Item names
 item.assemblyTable_caller.name=Assembly Table
@@ -14,6 +15,7 @@ item.assemblyTable_caller.name=Assembly Table
 # Container labels
 container.assembling=Assembling
 container.sourceGenerator.thermal=Thermal Generator
+container.sourceGenerator.thermalFluid=Thermal Fluid Generator
 
 # Internal container names(for SmartCursor)
 container.asmTable=Working Items on Assembly Table

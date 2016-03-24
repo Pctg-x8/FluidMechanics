@@ -15,16 +15,15 @@ package interfaces
 
 package object EnergyInjector
 {
-	def register(ctab: net.minecraft.creativetab.CreativeTabs) =
+	def register(ctab: net.minecraft.creativetab.CreativeTabs)
 	{
 		ContentRegistry register BlockModuled.setCreativeTab(ctab) as "energyInjector.attachable"
 		ContentRegistry register BlockStandalone.setCreativeTab(ctab) as "energyInjector.standalone"
 		ContentRegistry register classOf[TEModuled] as "TEEnergyInjectorModuled"
 		ContentRegistry register classOf[TEStandalone] as "TEEnergyInjector"
-		ctab
 	}
 	@SideOnly(Side.CLIENT)
-	def registerClient() =
+	def registerClient()
 	{
 		import cpw.mods.fml.client.registry.{RenderingRegistry, ClientRegistry}
 
@@ -154,16 +153,12 @@ package EnergyInjector
     			case _ =>
     			{
     				val newAmount = Math.min(resource.amount, this.getCapacity - this.getFluidAmount)
-    				if(!this.canAccept(resource)) 0
-    				else
-    				{
-    					if(perform && newAmount > 0)
-    					{
-    						this.stack.amount += newAmount
-    						tankHolder.updateTileInfo()
-    					}
-    					newAmount
-    				}
+					if(perform && newAmount > 0)
+					{
+						this.stack.amount += newAmount
+						tankHolder.updateTileInfo()
+					}
+					newAmount
     			}
     		}
     		// Called when attempting to drain fluids
@@ -276,7 +271,7 @@ package EnergyInjector
     	}
 
     	// Information Provider //
-    	final override def provideInformation(list: java.util.List[String]) =
+    	override final def provideInformation(list: java.util.List[String]) =
     	{
     		list add s"Facing on ${this.dir}"
     		list add s"Input(Water) Tank amount: ${this.waterTank.getFluidAmount} mb"

@@ -11,5 +11,6 @@ object WorldExtensions
 			if(world.getBlock(pos.x, pos.y, pos.z) == src) world.setBlockToAir(pos.x, pos.y, pos.z)
 		final def replaceBlock(pos: Vector3i, src: Block, dst: Block) =
 			if(world.getBlock(pos.x, pos.y, pos.z) == src) world.setBlock(pos.x, pos.y, pos.z, dst)
+		final def inClientSide = world.isRemote
 	}
 }

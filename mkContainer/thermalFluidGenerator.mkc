@@ -1,0 +1,14 @@
+# Thermal Fluid enerator
+
+surface 176, 166
+
+# fuel tank
+offset 64, 20
+tank 0, 0, 48, 48, vertical, 3, 4, true
+
+# player slot
+offset 8, 84
+slotMatrix 00, 00, 16, 16, 9, 3, 18, 18
+slotMatrix 00, 56, 16, 16, 9, 1, 18, 18
+
+output ../src/main/resources/assets/mcfm1710/textures/guiBase/thermalFluidGenerator.png

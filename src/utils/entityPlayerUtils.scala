@@ -24,5 +24,8 @@ object EntityLivingUtils
 		def facing = direction
 		// aliasing to directionInt
 		def facingInt = directionInt
+		// is useable containers
+		def isUseable(e: net.minecraft.tileentity.TileEntity) = p.worldObj.getTileEntity(e.xCoord, e.yCoord, e.zCoord) == e &&
+			p.getDistanceSq(e.xCoord.toDouble + 0.5d, e.yCoord.toDouble + 0.5d, e.zCoord.toDouble + 0.5d) <= 64.0d
 	}
 }

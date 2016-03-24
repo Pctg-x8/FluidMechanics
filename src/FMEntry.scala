@@ -1,5 +1,7 @@
 package com.cterm2.mcfm1710
 
+import org.apache.logging.log4j.LogManager
+
 import cpw.mods.fml.common.{Mod, SidedProxy}
 import cpw.mods.fml.common.Mod.EventHandler
 import cpw.mods.fml.common.event._
@@ -13,6 +15,8 @@ import cpw.mods.fml.common.network.NetworkRegistry
 @Mod(modid=FMEntry.ID, name=FMEntry.Name, version=FMEntry.Version, modLanguage="scala")
 object FMEntry
 {
+	final val logger = LogManager.getLogger("Fluid Mechanics")
+
 	final val ID = "mcfm1710"
 	final val Name = "Fluid Mechanics"
 	final val Version = "1.0-alpha"
@@ -34,7 +38,10 @@ object FMEntry
 	def init(e: FMLInitializationEvent) =
 	{
 		Fluids.init()
-		(AssemblyTable.register _ andThen EnergyInjector.register andThen ThermalGenerator.register)(this.ctab)
+		AssemblyTable register this.ctab
+		EnergyInjector register this.ctab
+		ThermalGenerator register this.ctab
+		ThermalFluidGenerator register this.ctab
 
 		this.proxy.registerRenderers()
 

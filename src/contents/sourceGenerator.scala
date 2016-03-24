@@ -16,7 +16,7 @@ package interfaces
 package object SourceGenerator
 {
 	@SideOnly(Side.CLIENT)
-	def registerClient() =
+	def registerClient()
 	{
 		import cpw.mods.fml.client.registry.RenderingRegistry
 
