@@ -114,18 +114,21 @@ void main(string[] args)
 			final switch(orientation)
 			{
 			case TankOrientation.Vertical:
-				for(int y = startY + h - meterInterval, count=1; y >= startY; y -= meterInterval, count++)
+				for(int y = h - meterInterval, count=1; y >= 0; y -= meterInterval, count++)
 				{
 					if(count >= largeMeterInterval) count = 0;
 					immutable meterLength = count == 0 ? 6 : 4;
-					pixels[y, startX + w - meterLength .. startX + w, 0 .. 3] *= 0.375f;
-					pixels[y, startX + w - meterLength .. startX + w, 2] *= 1.5f;
+					pixels[generateTexturesY + y, generateTexturesX .. generateTexturesX + meterLength, 0 .. 2] = 0.75f * 0.375f;
+					pixels[generateTexturesY + y, generateTexturesX .. generateTexturesX + meterLength, 2] = 0.75f * 0.375f * 1.5f;
+					pixels[generateTexturesY + y, generateTexturesX .. generateTexturesX + meterLength, 3] = 1.0f;
 					if(hasMeterEitherSide)
 					{
-						pixels[y, startX .. startX + meterLength, 0 .. 3] *= 0.375f;
-						pixels[y, startX .. startX + meterLength, 2] *= 1.5f;
+						pixels[generateTexturesY + y, generateTexturesX + 8 + 8 - meterLength .. generateTexturesX + 8 + 8, 0 .. 2] = 0.75f * 0.375f;
+						pixels[generateTexturesY + y, generateTexturesX + 8 + 8 - meterLength .. generateTexturesX + 8 + 8, 2] = 0.75f * 0.375f * 1.25f;
+						pixels[generateTexturesY + y, generateTexturesX + 8 + 8 - meterLength .. generateTexturesX + 8 + 8, 3] = 1.0f;
 					}
 				}
+				generateTexturesX += 8 + hasMeterEitherSide * 8;
 				break;
 			case TankOrientation.Horizontal:
 				for(int x = startX + w - meterInterval, count=1; x >= startX; x -= meterInterval, count++)

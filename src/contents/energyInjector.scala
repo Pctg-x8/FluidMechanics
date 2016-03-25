@@ -277,6 +277,11 @@ package EnergyInjector
     		list add s"Input(Water) Tank amount: ${this.waterTank.getFluidAmount} mb"
     		list add s"Output(EnergeticFluid) Tank amount: ${this.energeticTank.getFluidAmount} mb"
     	}
+		override final def forceSynchronize()
+		{
+			// Send Description packet to client
+			this.worldObj.markBlockForUpdate(this.xCoord, this.yCoord, this.zCoord)
+		}
     }
 
     // Energy Injector Module Tile Entity
