@@ -124,6 +124,7 @@ package ThermalFluidGenerator
 	final class Gui(val c: Container) extends GuiContainer(c)
 	{
 		import utils.LocalTranslationUtils._
+		import net.minecraft.client.renderer.texture.TextureMap
 
 		final val backImage = new ResourceLocation(FMEntry.ID, "textures/guiBase/thermalFluidGenerator.png")
 
@@ -138,6 +139,23 @@ package ThermalFluidGenerator
 		{
 			this.mc.getTextureManager.bindTexture(this.backImage)
 			this.drawTexturedModalRect(this.guiLeft, this.guiTop, 0, 0, this.xSize, this.ySize)
+			c.te.tank.getFluidOpt foreach
+			{
+				case fluid if fluid.amount > 0 =>
+				{
+					val pixels = (48 * (fluid.amount / 16000.0)).asInstanceOf[Int]
+					this.mc.getTextureManager.bindTexture(TextureMap.locationBlocksTexture)
+					for(left <- 0 until 3 map { this.guiLeft + 64 + 16 * _ })
+					{
+						for(top <- 0 until 3 map { this.guiTop + 20 + 48 - _ * 16 - 16 })
+						{
+							this.drawTexturedModelRectFromIcon(left, top, fluid.getFluid.getStillIcon, 16, 16)
+						}
+					}
+					this.mc.getTextureManager.bindTexture(this.backImage)
+					this.drawTexturedModalRect(this.guiLeft + 64, this.guiTop + 20, 64, 20, 48, 48 - pixels)
+				}
+			}
 			this.drawTexturedModalRect(this.guiLeft + 64, this.guiTop + 20, this.xSize, 0, 6, 48)
 			this.drawTexturedModalRect(this.guiLeft + 64 + 48 - 8, this.guiTop + 20, this.xSize + 8, 0, 8, 48)
 		}

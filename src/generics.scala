@@ -15,6 +15,7 @@ package Generics
 		private var stack: Option[FluidStack] = None
 		override def getFluid = this.stack getOrElse null
 		override def getFluidAmount = this.stack map (_.amount) getOrElse 0
+		def getFluidOpt = this.stack
 		def canFill(input: Fluid) = this.stack map { _.getFluid == input } getOrElse true
 		def canDrain(input: Fluid) = this.stack map { _.getFluid == input } getOrElse false
 
