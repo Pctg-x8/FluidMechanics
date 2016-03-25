@@ -128,14 +128,29 @@ package ThermalFluidGenerator
 
 		final val backImage = new ResourceLocation(FMEntry.ID, "textures/guiBase/thermalFluidGenerator.png")
 
-		override def drawGuiContainerForegroundLayer(p1: Int, p2: Int)
+		override def drawGuiContainerForegroundLayer(mouseX: Int, mouseY: Int)
 		{
 			val caption = t"container.sourceGenerator.thermalFluid"
 			val capWidth = this.fontRendererObj.getStringWidth(caption)
 			this.fontRendererObj.drawString(caption, (this.xSize - capWidth) / 2, 6, 0x404040)
 			this.fontRendererObj.drawString(t"container.inventory", 8, 72, 0x404040)
+
+			if((this.guiLeft + 64 until this.guiLeft + 64 + 48 contains mouseX) && (this.guiTop + 20 until this.guiTop + 20 + 48 contains mouseY))
+			{
+				val list = new java.util.ArrayList[String]
+				c.te.tank.getFluidOpt match
+				{
+					case Some(f) if f.amount > 0 =>
+					{
+						val ted = t"${f.getFluid.getUnlocalizedName}"
+						list add s"${ted}: ${f.amount} mb"
+					}
+					case _ => list add "Empty"
+				}
+				this.drawHoveringText(list, mouseX - this.guiLeft, mouseY - this.guiTop, this.fontRendererObj)
+			}
 		}
-		override def drawGuiContainerBackgroundLayer(p1: Float, p2: Int, p3: Int)
+		override def drawGuiContainerBackgroundLayer(p1: Float, mouseX: Int, mouseY: Int)
 		{
 			this.mc.getTextureManager.bindTexture(this.backImage)
 			this.drawTexturedModalRect(this.guiLeft, this.guiTop, 0, 0, this.xSize, this.ySize)
