@@ -90,12 +90,12 @@ package ThermalGenerator
 			super.readFromNBT(tag)
 			this.loadSpecificDataFrom(tag)
 		}
-		/*override final def getDescriptionPacket =
+		override final def getDescriptionPacket =
 			this.storeSpecificDataTo _ andThen (new S35PacketUpdateTileEntity(this.xCoord, this.yCoord, this.zCoord, 1, _)) apply (new NBTTagCompound)
 		override final def onDataPacket(net: NetworkManager, packet: S35PacketUpdateTileEntity)
 		{
 			((_: S35PacketUpdateTileEntity).func_148857_g) andThen this.loadSpecificDataFrom apply packet
-		}*/
+		}
 
 		// Inventory Configurations //
 		override final val getSizeInventory = 1
@@ -184,6 +184,8 @@ package ThermalGenerator
 			val burnTimePercent = (this.burnRemainingPercent * 100.0).asInstanceOf[Int]
 			list add s"Last BurnTime: $burnTimeLast tick(s) [${burnTimePercent}%]"
 		}
+		// Send Description packet to client
+		override final def forceSynchronize() = this.worldObj.markBlockForUpdate(this.xCoord, this.yCoord, this.zCoord)
     }
 
 	// Container and Gui //

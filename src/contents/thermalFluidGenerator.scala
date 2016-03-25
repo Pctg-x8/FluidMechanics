@@ -78,12 +78,12 @@ package ThermalFluidGenerator
 			super.readFromNBT(tag)
 			this.loadSpecificDataFrom(tag)
 		}
-		/*override final def getDescriptionPacket =
+		override final def getDescriptionPacket =
 			this.storeSpecificDataTo _ andThen (new S35PacketUpdateTileEntity(this.xCoord, this.yCoord, this.zCoord, 1, _)) apply (new NBTTagCompound)
 		override final def onDataPacket(net: NetworkManager, packet: S35PacketUpdateTileEntity)
 		{
 			{ (_: S35PacketUpdateTileEntity).func_148857_g } andThen this.loadSpecificDataFrom apply packet
-		}*/
+		}
 
 		// Fluid Handling //
 		override final def getTankInfo(from: ForgeDirection) = Array(this.tank.getInfo)
@@ -99,6 +99,8 @@ package ThermalFluidGenerator
 		{
 			list add s"Fluid Fuel amount: ${this.tank.getFluidAmount} mb"
 		}
+		// Send Description packet to client
+		override final def forceSynchronize() = this.worldObj.markBlockForUpdate(this.xCoord, this.yCoord, this.zCoord)
 	}
 
 	// Container and Gui //
@@ -136,6 +138,8 @@ package ThermalFluidGenerator
 		{
 			this.mc.getTextureManager.bindTexture(this.backImage)
 			this.drawTexturedModalRect(this.guiLeft, this.guiTop, 0, 0, this.xSize, this.ySize)
+			this.drawTexturedModalRect(this.guiLeft + 64, this.guiTop + 20, this.xSize, 0, 6, 48)
+			this.drawTexturedModalRect(this.guiLeft + 64 + 48 - 8, this.guiTop + 20, this.xSize + 8, 0, 8, 48)
 		}
 	}
 }
