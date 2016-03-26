@@ -18,6 +18,10 @@ package Generics
 		def getFluidOpt = this.stack
 		def canFill(input: Fluid) = this.stack map { _.getFluid == input } getOrElse true
 		def canDrain(input: Fluid) = this.stack map { _.getFluid == input } getOrElse false
+		def setAmount(amount: Int) = if(amount == 0) this.stack = None else this.stack foreach
+		{
+			_.amount = amount
+		}
 
 		// Tank Interacts //
 		override def fill(resource: FluidStack, perform: Boolean) = resource match
@@ -67,6 +71,10 @@ package Generics
 		import net.minecraft.inventory.Slot
 		import net.minecraft.item.ItemStack
 		import net.minecraft.entity.player.{EntityPlayer, InventoryPlayer}
+		import interops.smartcursor.SCModuleConnector
+
+		// Stop Force Syncing of SmartCursor ModuleConnector
+		SCModuleConnector.stopForceUpdate()
 
 		// Container Interacts //
 		// Merge item stack to other stack in transferStackInSlot(Returns if merging succeeded)
@@ -95,6 +103,11 @@ package Generics
 				}
 				case _ => None
 			} getOrElse null
+		override def onContainerClosed(player: EntityPlayer)
+		{
+			super.onContainerClosed(player)
+			SCModuleConnector.startForceUpdate()
+		}
 
 		// Place Player Slots(Returns tuple of (startSlotIndex, lastSecondaryIndex, lastSlotIndex))
 		protected final def addPlayerSlots(invPlayer: InventoryPlayer, left: Int, top: Int) =

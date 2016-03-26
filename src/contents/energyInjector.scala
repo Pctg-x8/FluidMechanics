@@ -46,6 +46,8 @@ package EnergyInjector
 	import com.cterm2.mcfm1710.utils.EntityLivingUtils._
 	import cpw.mods.fml.common.Optional
 	import com.cterm2.mcfm1710.Fluids
+	import net.minecraft.util.IIcon
+    import net.minecraft.client.renderer.texture.IIconRegister
 
     // Common Values
     final object EnergyInjectorSynchronizeDataKeys
@@ -63,7 +65,7 @@ package EnergyInjector
 
     // Block //
     // Energy Injector Block Base
-    abstract class BlockBase extends BlockContainer(Material.iron)
+    abstract class BlockBase extends BlockContainer(Material.iron) with interfaces.ITextureIndicesProvider
     {
         this.setHardness(2.0f)
 
@@ -71,6 +73,17 @@ package EnergyInjector
         @SideOnly(Side.CLIENT)
         override final val renderAsNormalBlock = false
         override final val isOpaqueCube = false
+	    protected final val icons = new Array[IIcon](7)
+	    @SideOnly(Side.CLIENT)
+	    override final def getIcon(side: Int, meta: Int) = this.icons(side)
+        override def onBlockPlacedBy(world: World, x: Int, y: Int, z: Int, placer: EntityLivingBase, stack: ItemStack) =
+        {
+            world.setBlockMetadataWithNotify(x, y, z, (placer.facingInt + 2) & 0x03, 2)
+            Option(world.getTileEntity(x, y, z).asInstanceOf[TEBase]) foreach
+            {
+                _.dir = convertFacingDirection(placer.facingInt).getOpposite
+            }
+        }
     }
     // Attachable Modification
     final object BlockModuled extends BlockBase
@@ -81,19 +94,17 @@ package EnergyInjector
         override final val isNormalCube = false
 		var renderType: Int = 0
         override final def getRenderType = renderType
+	    @SideOnly(Side.CLIENT)
+	    override def registerBlockIcons(register: IIconRegister)
+	    {
+		    for((i, tex) <- 0 until 7 map { x => (x, s"mcfm1710:energyInjectorModuled$x") })
+			    this.icons(i) = register.registerIcon(tex)
+	    }
         override def createNewTileEntity(world: World, meta: Int) =
         {
             val te = new TEModuled
             te.dir = convertFacingDirection(meta).getOpposite
             te
-        }
-        override def onBlockPlacedBy(world: World, x: Int, y: Int, z: Int, placer: EntityLivingBase, stack: ItemStack) =
-        {
-            world.setBlockMetadataWithNotify(x, y, z, placer.facingInt, 2)
-            Option(world.getTileEntity(x, y, z).asInstanceOf[TEModuled]) foreach
-            {
-                _.dir = convertFacingDirection(placer.facingInt).getOpposite
-            }
         }
     }
     // Standalone
@@ -102,6 +113,12 @@ package EnergyInjector
         // Overrided Configurations //
         var renderType: Int = 0
         override final def getRenderType = renderType
+	    @SideOnly(Side.CLIENT)
+	    override def registerBlockIcons(register: IIconRegister)
+	    {
+		    for((i, tex) <- 0 until 7 map { x => (x, s"mcfm1710:energyInjectorModuled$x") })
+			    this.icons(i) = register.registerIcon(tex)
+	    }
         override def createNewTileEntity(world: World, meta: Int) =
         {
             val te = new TEStandalone
@@ -110,7 +127,7 @@ package EnergyInjector
         }
         override def onBlockPlacedBy(world: World, x: Int, y: Int, z: Int, placer: EntityLivingBase, stack: ItemStack) =
         {
-            world.setBlockMetadataWithNotify(x, y, z, placer.facingInt, 2)
+            world.setBlockMetadataWithNotify(x, y, z, (placer.facingInt + 2) & 0x03, 2)
             Option(world.getTileEntity(x, y, z).asInstanceOf[TEStandalone]) foreach
             {
                 _.dir = convertFacingDirection(placer.facingInt).getOpposite
@@ -337,63 +354,50 @@ package EnergyInjector
 		}
 		override def renderWorldBlock(world: IBlockAccess, x: Int, y: Int, z: Int, block: Block, modelId: Int, renderer: RenderBlocks) =
 		{
-			Tessellator.instance.setColorOpaque_F(1.0f, 1.0f, 1.0f)
-			this.renderBlock(block, world.getBlockMetadata(x, y, z), x.toDouble, y.toDouble, z.toDouble, renderer)
-			false
+			val facing = world.getBlockMetadata(x, y, z) & 0x03
+			val rp = new utils.RenderPipeline(renderer, block.asInstanceOf[BlockBase], x, y, z, facing)
+			val margin = 1.0f / 8.0f
+
+			def renderHull(insideRender: Boolean)
+			{
+				renderer.renderFromInside = insideRender
+				// render Y Faces(under box)
+				rp.render2FacesY(0.0f, 1.0f / 256.0f, margin, margin, 0.5f, 1.0f - margin)
+				rp.render2FacesY(margin, 1.0f / 256.0f, 0.0f, 1.0f - margin, 0.5f, 1.0f)
+				rp.render2FacesY(1.0f - margin, 1.0f / 256.0f, margin, 1.0f, 0.5f, 1.0f - margin)
+				// render Z Faces
+				renderer.flipTexture = insideRender
+				rp.render2FacesZ(margin, 0.0f, 0.0f, 1.0f - margin, 0.5f, 1.0f)
+				renderer.flipTexture = false
+				rp.render2FacesZ(0.0f, 0.0f, margin, margin, 0.5f, 1.0f - margin)
+				rp.render2FacesZ(1.0f - margin, 0.0f, margin, 1.0f, 0.5f, 1.0f - margin)
+				// render X Faces
+				renderer.flipTexture = insideRender
+				rp.render2FacesX(0.0f, 0.0f, margin, 1.0f, 0.5f, 1.0f - margin)
+				renderer.flipTexture = false
+				rp.render2FacesX(margin, 0.0f, 0.0f, 1.0f - margin, 0.5f, margin)
+				rp.render2FacesX(margin, 0.0f, 1.0f - margin, 1.0f - margin, 0.5f, 1.0f)
+				renderer.renderFromInside = false
+			}
+			renderHull(false)
+			renderHull(true)
+
+			// splitter
+			if((facing & 0x01) != 0)
+			{
+				rp.render2FacesZ(0.0f, 0.0f, 0.5f - margin * 0.5f, 1.0f, 0.5f, 0.5f + margin * 0.5f, 6)
+			}
+			else
+			{
+				rp.render2FacesX(0.5f - margin * 0.5f, 0.0f, 0.0f, 0.5f + margin * 0.5f, 0.5f, 1.0f, 6)
+			}
+
+			rp.close()
+			true
 		}
 		override def shouldRender3DInInventory(meta: Int) = true
 		override def getRenderId = BlockModuled.renderType
 
-		// Render Codes //
-		private def renderBlock(blk: Block, meta: Int, x: Double, y: Double, z: Double, renderer: RenderBlocks) =
-		{
-			import net.minecraft.init.Blocks._
-
-			val margin = 1.0d / 8.0d
-			val tex = iron_block.getBlockTextureFromSide(0)
-
-			// shrinked render with RenderBlocks
-			def renderShell() =
-			{
-				renderer.renderFaceYNeg(blk, x, y + 1.0d / 256.0d, z, tex)
-				// renderer.renderFaceYPos(blk, x, y - 1.0d / 256.0d, z, tex)
-				renderer.renderMinZ += margin; renderer.renderMaxZ -= margin
-				renderer.renderFaceXNeg(blk, x, y, z, tex)
-				renderer.renderFaceXPos(blk, x, y, z, tex)
-				renderer.renderMinZ -= margin; renderer.renderMaxZ += margin
-				renderer.renderMinX += margin; renderer.renderMaxX -= margin
-				renderer.renderFaceZNeg(blk, x, y, z, tex)
-				renderer.renderFaceZPos(blk, x, y, z, tex)
-				renderer.renderMinX -= margin; renderer.renderMaxX += margin
-				renderer.renderMinX = 0; renderer.renderMaxX = margin
-				renderer.renderFaceZPos(blk, x, y, z - margin, tex)
-				renderer.renderFaceZNeg(blk, x, y, z + margin, tex)
-				renderer.renderMinX = 1.0d - margin; renderer.renderMaxX = 1.0d
-				renderer.renderFaceZPos(blk, x, y, z - margin, tex)
-				renderer.renderFaceZNeg(blk, x, y, z + margin, tex)
-				renderer.renderMinX = 0.0d
-				renderer.renderMinZ = 0; renderer.renderMaxZ = margin
-				renderer.renderFaceXPos(blk, x - margin, y, z, tex)
-				renderer.renderFaceXNeg(blk, x + margin, y, z, tex)
-				renderer.renderMinZ = 1.0d - margin; renderer.renderMaxZ = 1.0d
-				renderer.renderFaceXPos(blk, x - margin, y, z, tex)
-				renderer.renderFaceXNeg(blk, x + margin, y, z, tex)
-				renderer.renderMinZ = 0.0d
-			}
-			renderer.renderFromInside = true; renderShell()
-			renderer.renderFromInside = false; renderShell()
-			// separator
-			if((meta & 0x01) == 0)
-			{
-				renderer.renderFaceXPos(blk, x - 0.5d + 0.5d * margin, y, z, tex)
-				renderer.renderFaceXNeg(blk, x + 0.5d - 0.5d * margin, y, z, tex)
-			}
-			else
-			{
-				renderer.renderFaceZPos(blk, x, y, z - 0.5d + 0.5d * margin, tex)
-				renderer.renderFaceZNeg(blk, x, y, z + 0.5d - 0.5d * margin, tex)
-			}
-		}
 		private def renderBlockWithNormals(blk: Block, x: Double, y: Double, z: Double, renderer: RenderBlocks) =
 		{
 			import net.minecraft.init.Blocks._

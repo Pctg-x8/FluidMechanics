@@ -60,17 +60,8 @@ package SourceGenerator
     {
         var renderType: Int = 0
     }
-	object TextureIndices
-	{
-		final val Bottom	= 0
-		final val Top		= 1
-		final val Back		= 2
-		final val Front		= 3
-		final val Right		= 4
-		final val Left		= 5
-	}
     // Block //
-    abstract class BlockBase(textureNameBase: String) extends BlockContainer(Material.iron)
+    abstract class BlockBase(textureNameBase: String) extends BlockContainer(Material.iron) with interfaces.ITextureIndicesProvider
     {
 	    import utils.EntityLivingUtils._
 
@@ -81,7 +72,6 @@ package SourceGenerator
         override final val renderAsNormalBlock = false
         override final val isOpaqueCube = false
         override final val isNormalCube = false
-	    // Rendering Configurations //
 	    protected final val icons = new Array[IIcon](6)
 	    @SideOnly(Side.CLIENT)
 	    override def registerBlockIcons(register: IIconRegister)
@@ -93,14 +83,6 @@ package SourceGenerator
 	    override final def getIcon(side: Int, meta: Int) = this.icons(side)
 	    @SideOnly(Side.CLIENT)
 	    override final def colorMultiplier(world: IBlockAccess, x: Int, y: Int, z: Int) = 0xe0e0e0    // little darker
-	    final def getIndices(facing: Int) = facing match
-	    {
-			// -z, +z, -x, +x
-		    case 0 => (TextureIndices.Back, TextureIndices.Front, TextureIndices.Right, TextureIndices.Left)
-			case 1 => (TextureIndices.Right, TextureIndices.Left, TextureIndices.Front, TextureIndices.Back)
-			case 2 => (TextureIndices.Front, TextureIndices.Back, TextureIndices.Left, TextureIndices.Right)
-			case 3 => (TextureIndices.Left, TextureIndices.Right, TextureIndices.Back, TextureIndices.Front)
-	    }
 
         override final def getRenderType = CommonValues.renderType
 
@@ -116,7 +98,7 @@ package SourceGenerator
 	abstract class TileEntityBase extends net.minecraft.tileentity.TileEntity
 	{
 		import net.minecraftforge.common.util.ForgeDirection
-		
+
 		// Facing Settings //
 		protected var frontDirection = ForgeDirection.UNKNOWN
 		def setFacing(facing: Int)
@@ -196,121 +178,8 @@ package SourceGenerator
         }
         override def renderWorldBlock(world: IBlockAccess, x: Int, y: Int, z: Int, block: Block, modelId: Int, renderer: RenderBlocks) =
         {
-            val l = block.colorMultiplier(world, x, y, z)
-            val (r, g, b) = applyAnaglyph(((l >> 16) & 0xff) / 255.0f, ((l >> 8) & 0xff) / 255.0f, (l & 0xff) / 255.0f)
-
-	        this.renderWithColorMultiplier(renderer, block, x.toFloat, y.toFloat, z.toFloat, r, g, b)
-            true
-        }
-        override def shouldRender3DInInventory(meta: Int) = true
-        override def getRenderId = CommonValues.renderType
-
-	    private class RenderPipeline(val renderer: RenderBlocks, val block: Block, val x: Float, val y: Float, val z: Float, val r: Float, val g: Float, val b: Float)
-	    {
-		    final val (world, tess) = (renderer.blockAccess, Tessellator.instance)
-			final val (xi, yi, zi) = (x.toInt, y.toInt, z.toInt)
-			final val MetaValue(hasInjector, facing) = world.getBlockMetadata(xi, yi, zi)
-
-			renderer.uvRotateTop = Array(0, 1, 3, 2)(facing); renderer.uvRotateBottom = Array(0, 1, 3, 2)(facing)
-			final val (backIndex, frontIndex, rightIndex, leftIndex) = block.asInstanceOf[BlockBase].getIndices(facing)
-
-		    // brightness values
-		    lazy val brightness = block.getMixedBrightnessForBlock(world, xi, yi, zi)
-		    lazy val underBrightness = block.getMixedBrightnessForBlock(world, xi, yi - 1, zi)
-		    lazy val topBrightness = block.getMixedBrightnessForBlock(world, xi, yi + 1, zi)
-		    lazy val backBrightness = block.getMixedBrightnessForBlock(world, xi, yi, zi - 1)
-		    lazy val frontBrightness = block.getMixedBrightnessForBlock(world, xi, yi, zi + 1)
-		    lazy val rightBrightness = block.getMixedBrightnessForBlock(world, xi - 1, yi, zi)
-		    lazy val leftBrightness = block.getMixedBrightnessForBlock(world, xi + 1, yi, zi)
-
-		    // block icons
-		    lazy val underIcon = renderer.getBlockIcon(block, world, xi, yi, zi, 0)
-		    lazy val topIcon = renderer.getBlockIcon(block, world, xi, yi, zi, 1)
-		    lazy val backIcon = renderer.getBlockIcon(block, world, xi, yi, zi, backIndex)
-		    lazy val frontIcon = renderer.getBlockIcon(block, world, xi, yi, zi, frontIndex)
-		    lazy val rightIcon = renderer.getBlockIcon(block, world, xi, yi, zi, rightIndex)
-		    lazy val leftIcon = renderer.getBlockIcon(block, world, xi, yi, zi, leftIndex)
-
-		    // side properties
-		    lazy val underRendered = renderer.renderAllFaces || block.shouldSideBeRendered(world, xi, yi - 1, zi, 0)
-		    lazy val topRendered = renderer.renderAllFaces || block.shouldSideBeRendered(world, xi, yi + 1, zi, 1)
-		    lazy val backRendered = renderer.renderAllFaces || block.shouldSideBeRendered(world, xi, yi, zi - 1, backIndex)
-		    lazy val frontRendered = renderer.renderAllFaces || block.shouldSideBeRendered(world, xi, yi, zi + 1, frontIndex)
-		    lazy val rightRendered = renderer.renderAllFaces || block.shouldSideBeRendered(world, xi - 1, yi, zi, rightIndex)
-		    lazy val leftRendered = renderer.renderAllFaces || block.shouldSideBeRendered(world, xi + 1, yi, zi, leftIndex)
-
-		    // shading const
-		    final val (underFactor, xFactor, zFactor) = (0.5f, 0.6f, 0.8f)
-
-		    // render -Y Face
-		    @inline
-		    def renderFaceYNeg(sx: Float, sy: Float, sz: Float, dx: Float, dy: Float, dz: Float)
-		    {
-			    if(sy > 0.0d || underRendered)
-			    {
-				    renderer.setRenderBounds(sx, sy, sz, dx, dy, dz)
-				    tess.setBrightness(if(renderer.renderMinY > 0.0d) brightness else underBrightness)
-				    tess.setColorOpaque_F(r * underFactor, g * underFactor, b * underFactor)
-				    renderer.renderFaceYNeg(block, x, y, z, underIcon)
-			    }
-		    }
-		    // render +Y Face
-		    @inline
-		    def renderFaceYPos(sx: Float, sy: Float, sz: Float, dx: Float, dy: Float, dz: Float)
-		    {
-			    if(dy < 1.0d || topRendered)
-			    {
-				    renderer.setRenderBounds(sx, sy, sz, dx, dy, dz)
-				    tess.setBrightness(if(renderer.renderMaxY < 1.0d) brightness else topBrightness)
-				    tess.setColorOpaque_F(r, g, b)
-				    renderer.renderFaceYPos(block, x, y, z, topIcon)
-			    }
-		    }
-		    // render 4 faces
-		    @inline
-		    def render4Faces(sx: Float, sy: Float, sz: Float, dx: Float, dy: Float, dz: Float)
-		    {
-			    renderer.setRenderBounds(sx, sy, sz, dx, dy, dz)
-
-			    // z
-			    tess.setColorOpaque_F(r * zFactor, g * zFactor, b * zFactor)
-			    if(renderer.renderMinZ > 0.0d || backRendered)
-			    {
-				    // neg
-				    tess.setBrightness(if(renderer.renderMinZ > 0.0d) brightness else backBrightness)
-				    renderer.renderFaceZNeg(block, x, y, z, backIcon)
-			    }
-			    if(renderer.renderMaxZ < 1.0d || frontRendered)
-			    {
-				    // pos
-				    tess.setBrightness(if(renderer.renderMaxZ < 1.0d) brightness else frontBrightness)
-				    renderer.renderFaceZPos(block, x, y, z, frontIcon)
-			    }
-			    // x
-			    tess.setColorOpaque_F(r * xFactor, g * xFactor, b * xFactor)
-			    if(renderer.renderMinX > 0.0d || rightRendered)
-			    {
-				    // neg
-				    tess.setBrightness(if(renderer.renderMinX > 0.0d) brightness else rightBrightness)
-				    renderer.renderFaceXNeg(block, x, y, z, rightIcon)
-			    }
-			    if(renderer.renderMaxX < 1.0d || leftRendered)
-			    {
-				    // pos
-				    tess.setBrightness(if(renderer.renderMaxX < 1.0d) brightness else leftBrightness)
-				    renderer.renderFaceXPos(block, x, y, z, leftIcon)
-			    }
-		    }
-
-			def close()
-			{
-				renderer.uvRotateTop = 0; renderer.uvRotateBottom = 0
-			}
-	    }
-
-	    private def renderWithColorMultiplier(renderer: RenderBlocks, block: Block, x: Float, y: Float, z: Float, r: Float, g: Float, b: Float)
-	    {
-		    val rp = new RenderPipeline(renderer, block, x, y, z, r, g, b)
+			val MetaValue(hasInjector, facing) = world.getBlockMetadata(x, y, z)
+			val rp = new utils.RenderPipeline(renderer, block.asInstanceOf[Block with interfaces.ITextureIndicesProvider], x, y, z, facing)
 
 		    // render -Y Faces(Pole under and body under)
 		    rp.renderFaceYNeg(0.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f)
@@ -323,9 +192,9 @@ package SourceGenerator
 		    for(xo <- Seq(0.0f, 7.0f / 8.0f); zo <- Seq(0.0f, 7.0f / 8.0f))
 			    rp.render4Faces(xo, 0.0f, zo, xo + 1.0f / 8.0f, 0.5f, zo + 1.0f / 8.0f)
 			rp.close()
-	    }
-
-	    private def applyAnaglyph(r: Float, g: Float, b: Float) = if(!EntityRenderer.anaglyphEnable) (r, g, b) else
-		    ((r * 30.0f + g * 59.0f + b * 11.0f) / 100.0f, (r * 30.0f + g * 70.0f) / 100.0f, (r * 30.0f + b * 70.0f) / 100.0f)
+            true
+        }
+        override def shouldRender3DInInventory(meta: Int) = true
+        override def getRenderId = CommonValues.renderType
     }
 }

@@ -52,7 +52,7 @@ package ThermalGenerator
     import cpw.mods.fml.common.Optional
     import net.minecraft.client.renderer.texture.IIconRegister
     import net.minecraft.util.IIcon
-    import utils.WorldExtensions._, SourceGenerator.TextureIndices
+    import utils.WorldExtensions._
 
 	object StoreKeys
 	{
@@ -293,7 +293,6 @@ package ThermalGenerator
 			case _ => this.mergeItemStack(stack, playerSlotStart, playerHotbarSlotStart, false)
 		}
 
-		/*
 		// Container Interacts with Crafters //
 		var lastBurnTimeLast = this.te.burnTimeLast
 		var lastFullBurnTime = this.te.fullBurnTime
@@ -318,7 +317,6 @@ package ThermalGenerator
 			this.lastBurnTimeLast = this.te.burnTimeLast
 			this.lastFullBurnTime = this.te.fullBurnTime
 		}
-		*/
 		// receiver
 		@SideOnly(Side.CLIENT)
 		override def updateProgressBar(index: Int, value: Int) = index match

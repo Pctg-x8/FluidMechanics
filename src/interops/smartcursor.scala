@@ -1,7 +1,7 @@
 package com.cterm2.mcfm1710.interops.smartcursor
 
 import com.asaskevich.smartcursor.api.{ModuleConnector, IBlockProcessor}
-import cpw.mods.fml.common.Mod
+import cpw.mods.fml.common.{Mod, Loader}
 import cpw.mods.fml.common.event._
 import cpw.mods.fml.common.network.{NetworkRegistry, ByteBufUtils}
 import cpw.mods.fml.common.network.simpleimpl.{IMessage, IMessageHandler, MessageContext}
@@ -17,6 +17,15 @@ object SCModuleConnector
 	final val Version = "1.0-alpha"
 
 	final val network = NetworkRegistry.INSTANCE.newSimpleChannel(ID)
+	var forceUpdate = true
+	def startForceUpdate()
+	{
+		if(Loader.isModLoaded(ID)) SCModuleConnector.forceUpdate = true
+	}
+	def stopForceUpdate()
+	{
+		if(Loader.isModLoaded(ID)) SCModuleConnector.forceUpdate = false
+	}
 
 	@Mod.EventHandler
 	def preInit(e: FMLPreInitializationEvent) =
@@ -80,7 +89,7 @@ class BlockInformationProvider extends IBlockProcessor
 		{
 			case ip: IInformationProvider =>
 			{
-				SCModuleConnector.network.sendToServer(new SCPacketForceSync(x, y, z))
+				if(SCModuleConnector.forceUpdate) SCModuleConnector.network.sendToServer(new SCPacketForceSync(x, y, z))
 				ip.provideInformation(list)
 			}
 			case _ => ()

@@ -49,7 +49,7 @@ package ThermalFluidGenerator
 {
 	import net.minecraft.client.renderer.texture.IIconRegister
 	import net.minecraft.world.World
-	import net.minecraft.entity.player.EntityPlayer, SourceGenerator.TextureIndices
+	import net.minecraft.entity.player.EntityPlayer
 
 	object StoreKeys
 	{
@@ -169,9 +169,15 @@ package ThermalFluidGenerator
 	import net.minecraft.item.ItemStack
 	import net.minecraft.client.gui.inventory.GuiContainer
 	import net.minecraft.util.ResourceLocation
+	object ProgressBar
+	{
+		final val FuelAmount = 0
+	}
 	final class Container(val te: TileEntity, val invPlayer: InventoryPlayer) extends Generics.Container
 	{
 		import utils.EntityLivingUtils._
+		import net.minecraft.inventory.ICrafting
+		import collection.JavaConversions._
 
 		val (playerSlotStart, playerHotbarSlotStart, playerSlotEnd) = this.addPlayerSlots(invPlayer, 8, 84)
 
@@ -180,6 +186,35 @@ package ThermalFluidGenerator
 		{
 			case n if playerSlotStart until playerHotbarSlotStart contains n => this.mergeItemStack(stack, playerHotbarSlotStart, playerSlotEnd, false)
 			case _ => this.mergeItemStack(stack, playerSlotStart, playerHotbarSlotStart, false)
+		}
+
+		// Container Interacts with Crafters //
+		var lastFuelAmount = this.te.tank.getFluidAmount
+		override def addCraftingToCrafters(crafter: ICrafting)
+		{
+			super.addCraftingToCrafters(crafter)
+			// initial syncing
+			crafter.sendProgressBarUpdate(this, ProgressBar.FuelAmount, this.te.tank.getFluidAmount)
+			this.lastFuelAmount = this.te.tank.getFluidAmount
+		}
+		override def detectAndSendChanges()
+		{
+			super.detectAndSendChanges()
+
+			if(this.te.tank.getFluidAmount != this.lastFuelAmount)
+			{
+				this.lastFuelAmount = this.te.tank.getFluidAmount
+				this.crafters map { _.asInstanceOf[ICrafting] } foreach
+				{
+					_.sendProgressBarUpdate(this, ProgressBar.FuelAmount, this.lastFuelAmount)
+				}
+			}
+		}
+		// receiver
+		@SideOnly(Side.CLIENT)
+		override def updateProgressBar(index: Int, value: Int) = index match
+		{
+			case ProgressBar.FuelAmount => this.te.tank.setAmount(value)
 		}
 	}
 	final class Gui(val c: Container) extends GuiContainer(c)
