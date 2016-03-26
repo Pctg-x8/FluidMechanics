@@ -2,7 +2,7 @@ package com.cterm2.mcfm1710.utils
 
 import net.minecraft.entity.EntityLivingBase
 import net.minecraftforge.common.util.ForgeDirection
-import net.minecraft.util.MathHelper
+import net.minecraft.util.{EnumFacing, MathHelper}
 
 object EntityLivingUtils
 {
@@ -14,6 +14,13 @@ object EntityLivingUtils
 		case 2 => ForgeDirection.NORTH
 		case 3 => ForgeDirection.EAST
 	}
+	def convertFacingDirectionE(i: Int) = i match
+	{
+		case 0 => EnumFacing.SOUTH
+		case 1 => EnumFacing.WEST
+		case 2 => EnumFacing.NORTH
+		case 3 => EnumFacing.EAST
+	}
 	implicit final class ImplicitWrapper(val p: EntityLivingBase) extends AnyVal
 	{
 		// Gets player facing direction as integer
@@ -21,7 +28,7 @@ object EntityLivingUtils
 		// Gets player facing direction as ForgeDirection
 		def direction = convertFacingDirection(this.directionInt)
 		// aliasing to direction
-		def facing = direction
+		def facing = convertFacingDirectionE(this.directionInt)
 		// aliasing to directionInt
 		def facingInt = directionInt
 		// is useable containers

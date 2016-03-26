@@ -30,7 +30,7 @@ package AssemblyTable
 	import java.util.Random
 
 	// Common Values/Utils
-	final object CommonUtils
+	object CommonUtils
 	{
 		// MetaBits //
 		final val SlaveBit = 0x08
@@ -63,7 +63,7 @@ package AssemblyTable
 		final val slotIndexKey = "slotIndex"
 	}
 
-	final object Item extends ItemBase
+	object Item extends ItemBase
 	{
 		setUnlocalizedName("assemblyTable_caller")
 
@@ -74,7 +74,7 @@ package AssemblyTable
 				case (false, ForgeDirection.UP) =>
 				{
 					val placeY = y + 1
-					val blockSlaveDirection = player.facing.getRotation(ForgeDirection.UP)
+					val blockSlaveDirection = player.direction.getRotation(ForgeDirection.UP)
 					val slavePos = Vector3i(x, placeY, z) withOffset blockSlaveDirection.offset
 					val placeInfo = BlockPlacementInfo(player, world, Vector3i(x, placeY, z))
 					val placeInfoSlave = BlockPlacementInfo(player, world, slavePos)
@@ -98,7 +98,7 @@ package AssemblyTable
 	}
 
 	// Blocks //
-	final object Block extends BlockContainer(Material.rock)
+	object Block extends BlockContainer(Material.rock)
 	{
 		setHardness(1.0f)
 
@@ -191,7 +191,7 @@ package AssemblyTable
 	}
 
 	// Additional Block
-	final object BlockTopPart extends BlockBase(Material.rock)
+	object BlockTopPart extends BlockBase(Material.rock)
 	{
 		this.setHardness(1.0f)
 		this.setBlockBounds(0.0f, 0.0f, 0.0f, 1.0f, 0.5f, 1.0f)
