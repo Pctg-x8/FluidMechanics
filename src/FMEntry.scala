@@ -1,6 +1,8 @@
 package com.cterm2.mcfm1710
 
-import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.{LogManager, Level}
+import org.apache.logging.log4j.core.LoggerContext
+import org.apache.logging.log4j.core.appender.ConsoleAppender
 
 import cpw.mods.fml.common.{Mod, SidedProxy}
 import cpw.mods.fml.common.Mod.EventHandler
@@ -15,7 +17,7 @@ import cpw.mods.fml.common.network.NetworkRegistry
 @Mod(modid=FMEntry.ID, name=FMEntry.Name, version=FMEntry.Version, modLanguage="scala")
 object FMEntry
 {
-	final val logger = LogManager.getLogger("Fluid Mechanics")
+	lazy val logger = LogManager.getLogger("Fluid Mechanics")
 
 	final val ID = "mcfm1710"
 	final val Name = "Fluid Mechanics"
@@ -32,7 +34,15 @@ object FMEntry
 	@EventHandler
 	def preInit(e: FMLPreInitializationEvent) =
 	{
-		System.out.println(s"${Name} version ${Version}.")
+		// Enable Trace Logging
+		val context = LogManager.getContext(false).asInstanceOf[LoggerContext]
+		val config = context.getConfiguration
+		val lconf = config.getLoggerConfig("Fluid Mechanics")
+		lconf.addAppender(config.getAppenders.get("FmlSysOut").asInstanceOf[ConsoleAppender], Level.ALL, null)
+		lconf.setLevel(Level.ALL)
+		context.updateLoggers()
+
+		logger.info(s"$Name version $Version.")
 	}
 	@EventHandler
 	def init(e: FMLInitializationEvent) =

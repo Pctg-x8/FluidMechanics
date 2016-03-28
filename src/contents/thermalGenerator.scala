@@ -1,6 +1,5 @@
 package com.cterm2.mcfm1710
 
-import interfaces.ISourceGenerator
 import interops.smartcursor._
 import cpw.mods.fml.relauncher.{Side, SideOnly}
 import net.minecraft.world.World
@@ -15,17 +14,16 @@ package object ThermalGenerator
 		ctab
 	}
 
-	var replacing = false
 	def setBlockLitState(world: World, x: Int, y: Int, z: Int, lit: Boolean, forceUpdate: Boolean = false) =
 	{
 		val content = Option(world.getTileEntity(x, y, z))
 		val meta = world.getBlockMetadata(x, y, z)
 
-		this.replacing = true
+		SourceGenerator.replacing = true
 		val doReplace = if(lit && world.getBlock(x, y, z) == UnlitBlock) world.setBlock(x, y, z, LitBlock)
 		else if(!lit && world.getBlock(x, y, z) == LitBlock) world.setBlock(x, y, z, UnlitBlock)
 		else false
-		this.replacing = false
+		SourceGenerator.replacing = false
 
 		if(doReplace)
 		{
@@ -59,6 +57,7 @@ package ThermalGenerator
 		final val FuelStack = "fuelStack"
 		final val BurnTime = "burnTimeLast"
 		final val FullBurnTime = "burnTimeFull"
+		final val Injector = "injector"
 	}
 	object ProgressBar
 	{
@@ -72,17 +71,18 @@ package ThermalGenerator
         override def createNewTileEntity(world: World, meta: Int) = new TileEntity
 
 		// Block Interacts //
-		override def onBlockActivated(world: World, x: Int, y: Int, z: Int, player: EntityPlayer, side: Int, xo: Float, yo: Float, zo: Float) =
-			(world.inClientSide, world.getTileEntity(x, y, z).asInstanceOf[TileEntity]) match
-			{
-				case (true, _) => true
-				case (false, tile) if tile != null => player.openGui(FMEntry, 0, world, x, y, z); true
-				case _ => false
-			}
-	    override def breakBlock(world: World, x: Int, y: Int, z: Int, block: net.minecraft.block.Block, meta: Int)
+		override def openContainerScreen(player: EntityPlayer, world: World, x: Int, y: Int, z: Int)
+		{
+			player.openGui(FMEntry, 0, world, x, y, z)
+		}
+	    override def breakContainer(world: World, x: Int, y: Int, z: Int, meta: Int)
 	    {
-			if(!replacing) Option(world.getTileEntity(x, y, z).asInstanceOf[TileEntity]) foreach { _.dropItems() }
+			Option(world.getTileEntity(x, y, z).asInstanceOf[TileEntity]) foreach { _.dropItems() }
 	    }
+
+		import net.minecraft.item.Item, java.util.Random
+		override final def getItem(world: World, x: Int, y: Int, z: Int) = Item.getItemFromBlock(UnlitBlock)
+		override final def getItemDropped(meta: Int, random: Random, fortune: Int) = Item.getItemFromBlock(UnlitBlock)
     }
 	object UnlitBlock extends Block { this.setLightLevel(0.0f) }
 	object LitBlock extends Block
@@ -98,8 +98,9 @@ package ThermalGenerator
 		override def getUnlocalizedName = UnlitBlock.getUnlocalizedName
 	}
 
+	import net.minecraftforge.fluids._, net.minecraftforge.common.util.ForgeDirection
 	@Optional.Interface(iface="com.cterm2.mcfm1710.interops.smartcursor.IInformationProvider", modid=SCModuleConnector.ID, striprefs=true)
-    final class TileEntity extends SourceGenerator.TileEntityBase with ISourceGenerator with IInventory with IInformationProvider
+    final class TileEntity extends SourceGenerator.TileEntityBase with IInventory with IInformationProvider with IFluidHandler
     {
 		import net.minecraft.tileentity.TileEntityFurnace
 		import net.minecraft.network.play.server.S35PacketUpdateTileEntity
@@ -114,34 +115,30 @@ package ThermalGenerator
 		// Data Synchronization //
         override def storeSpecificDataTo(tag: NBTTagCompound) =
         {
+			super.storeSpecificDataTo(tag)
 			tag.setShort(StoreKeys.BurnTime, this.burnTimeLast.asInstanceOf[Short])
 			tag.setShort(StoreKeys.FullBurnTime, this.fullBurnTime.asInstanceOf[Short])
-			this.slotItem map { x => { val tag = new NBTTagCompound; x.writeToNBT(tag); tag } } foreach { tag.setTag(StoreKeys.FuelStack, _) }
+			this.slotItem map { x => val tag = new NBTTagCompound; x.writeToNBT(tag); tag } foreach { tag.setTag(StoreKeys.FuelStack, _) }
 			tag
         }
-        override def loadSpecificDataFrom(tag: NBTTagCompound) =
+        override def loadSpecificDataFrom(tag: NBTTagCompound)
         {
+			super.loadSpecificDataFrom(tag)
 			this.burnTimeLast = Option(tag.getShort(StoreKeys.BurnTime).asInstanceOf[Int]) getOrElse 0
 			this.fullBurnTime = Option(tag.getShort(StoreKeys.FullBurnTime).asInstanceOf[Int]) getOrElse 0
 			this.slotItem = Option(tag.getTag(StoreKeys.FuelStack).asInstanceOf[NBTTagCompound]) map ItemStack.loadItemStackFromNBT
-			tag
         }
-		override def writeToNBT(tag: NBTTagCompound)
-		{
-			super.writeToNBT(tag)
-			this.storeSpecificDataTo(tag)
-		}
-		override def readFromNBT(tag: NBTTagCompound)
-		{
-			super.readFromNBT(tag)
-			this.loadSpecificDataFrom(tag)
-		}
-		override def getDescriptionPacket =
-			this.storeSpecificDataTo _ andThen (new S35PacketUpdateTileEntity(this.xCoord, this.yCoord, this.zCoord, 1, _)) apply new NBTTagCompound
-		override def onDataPacket(net: NetworkManager, packet: S35PacketUpdateTileEntity)
-		{
-			((_: S35PacketUpdateTileEntity).func_148857_g) andThen this.loadSpecificDataFrom apply packet
-		}
+
+		// Fluid Handling //
+		override def getTankInfo(from: ForgeDirection) = this.injector map { _.getTankInfo(from) } getOrElse null
+		override def canDrain(from: ForgeDirection, fluid: Fluid) = this.injector exists { _.canDrain(from, fluid) }
+		override def canFill(from: ForgeDirection, fluid: Fluid) = this.injector exists { _.canFill(from, fluid) }
+		override def fill(from: ForgeDirection, resource: FluidStack, perform: Boolean) =
+			this.injector map { _.fill(from, resource, perform) } getOrElse 0
+		override def drain(from: ForgeDirection, resource: FluidStack, perform: Boolean) =
+			this.injector map { _.drain(from, resource, perform) } getOrElse null
+		override def drain(from: ForgeDirection, maxDrain: Int, perform: Boolean) =
+			this.injector map { _.drain(from, maxDrain, perform) } getOrElse null
 
 		// Inventory Configurations //
 		override val getSizeInventory = 1
@@ -190,9 +187,17 @@ package ThermalGenerator
 		// TileEntity Ticking //
 		override def updateEntity()
 		{
-			this.burnTimeLast = if(this.burnTimeLast > 0) this.processBurn() else this.useNextFuel()
+			if(this.worldObj.inServerSide)
+			{
+				if(this.burnTimeLast > 0) this.burnTimeLast = this.processBurn()
+				if(this.burnTimeLast <= 0) this.burnTimeLast = this.useNextFuel()
+			}
 		}
-		private def processBurn() = this.burnTimeLast - 1
+		private def processBurn() =
+		{
+			this.injector foreach { _.injectFluids(1) }
+			this.burnTimeLast - 24
+		}
 		private def useNextFuel() = (this.worldObj.inClientSide, this.slotItem) match
 		{
 			case (true, _) => 0
@@ -205,7 +210,7 @@ package ThermalGenerator
 					this.markDirty()
 					this.fullBurnTime = burnTimeNext
 					this.litBlock()
-					burnTimeNext
+					this.burnTimeLast + burnTimeNext
 				}
 				else { this.unlitBlock(); 0 }
 			case _ => this.unlitBlock(); 0
@@ -213,12 +218,12 @@ package ThermalGenerator
 		private def litBlock()
 		{
 			// Lit block
-			if(setBlockLitState(this.worldObj, this.xCoord, this.yCoord, this.zCoord, lit = true)) this.markDirty()
+			if(setBlockLitState(this.worldObj, this.xCoord, this.yCoord, this.zCoord, true)) this.markDirty()
 		}
 		private def unlitBlock()
 		{
 			// Unlit block(actual all fuels burned?)
-			if(setBlockLitState(this.worldObj, this.xCoord, this.yCoord, this.zCoord, lit = false)) this.markDirty()
+			if(setBlockLitState(this.worldObj, this.xCoord, this.yCoord, this.zCoord, false)) this.markDirty()
 		}
 		def burnRemainingPercent = if(this.fullBurnTime <= 0) 0.0 else this.burnTimeLast.toDouble / this.fullBurnTime
 
@@ -228,40 +233,20 @@ package ThermalGenerator
 			for(slot <- this.slotItem) list add s"Stacking ${slot.getItem.getItemStackDisplayName(slot)}x${slot.stackSize}"
 			val burnTimePercent = (this.burnRemainingPercent * 100.0).asInstanceOf[Int]
 			list add s"Last BurnTime: $burnTimeLast tick(s) [$burnTimePercent%]"
+			this.injector foreach { _.provideInformation(list) }
 		}
 		// Send Description packet to client
 		override def forceSynchronize() =
 			setBlockLitState(this.worldObj, this.xCoord, this.yCoord, this.zCoord,
-				lit = this.slotItem exists { TileEntityFurnace.getItemBurnTime(_) > 0 }, true)
+				(this.slotItem exists { TileEntityFurnace.getItemBurnTime(_) > 0 }) || this.burnTimeLast > 0, true)
 
 		// Drop all contained items from specified coordinate
 		def dropItems() =
 		{
 			import net.minecraft.entity.item.EntityItem
-			import utils._
+			import utils._, utils.EntityExtensions._
 
-			for(stack <- this.slotItem)
-			{
-				val randomVector = Vector3f.randomUnit * 0.8f + 0.1f
-				val dropPoint = Vector3f(this.xCoord, this.yCoord, this.zCoord) + randomVector
-
-				while(stack.stackSize > 0)
-				{
-					val limit = (x: Int) => if(x > stack.stackSize) stack.stackSize else x
-					val dropCount = limit(RandomGenerator.range(10, 31))
-					stack.stackSize -= dropCount
-
-					val droppedStack = new ItemStack(stack.getItem, dropCount, stack.getItemDamage)
-					val entityItem = new EntityItem(this.worldObj, dropPoint.x.toDouble, dropPoint.y.toDouble, dropPoint.z.toDouble, droppedStack)
-					if(stack.hasTagCompound) entityItem.getEntityItem.setTagCompound(stack.getTagCompound.copy().asInstanceOf[NBTTagCompound])
-
-					val motionConst = 0.05f
-					entityItem.motionX = (RandomGenerator.nextGaussian.toFloat * motionConst).toDouble
-					entityItem.motionY = (RandomGenerator.nextGaussian.toFloat * motionConst + 0.2f).toDouble
-					entityItem.motionZ = (RandomGenerator.nextGaussian.toFloat * motionConst).toDouble
-					this.worldObj.spawnEntityInWorld(entityItem)
-				}
-			}
+			this.slotItem foreach { _.dropAsEntityRandom(this.worldObj, this.xCoord, this.yCoord, this.zCoord) }
 		}
     }
 

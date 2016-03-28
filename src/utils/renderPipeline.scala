@@ -30,8 +30,15 @@ import interfaces.ITextureIndicesProvider
 
 package utils
 {
+	object RenderPipeline
+	{
+		// Shading Const
+		final val (underFactor, xFactor, zFactor) = (0.5f, 0.6f, 0.8f)
+	}
 	class RenderPipeline(val renderer: RenderBlocks, val block: Block with ITextureIndicesProvider, val x: Float, val y: Float, val z: Float, val facing: Int)
 	{
+		import RenderPipeline._
+
 		final val (world, tess) = (renderer.blockAccess, Tessellator.instance)
 		final val (xi, yi, zi) = (x.toInt, y.toInt, z.toInt)
 
@@ -76,9 +83,6 @@ package utils
 		lazy val frontRendered = renderer.renderAllFaces || block.shouldSideBeRendered(world, xi, yi, zi + 1, frontIndex)
 		lazy val rightRendered = renderer.renderAllFaces || block.shouldSideBeRendered(world, xi - 1, yi, zi, rightIndex)
 		lazy val leftRendered = renderer.renderAllFaces || block.shouldSideBeRendered(world, xi + 1, yi, zi, leftIndex)
-
-		// shading const
-		final val (underFactor, xFactor, zFactor) = (0.5f, 0.6f, 0.8f)
 
 		// render -Y Face
 		@inline

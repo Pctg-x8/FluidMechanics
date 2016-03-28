@@ -2,7 +2,7 @@ package com.cterm2.mcfm1710
 
 import cpw.mods.fml.relauncher.{Side, SideOnly}
 import net.minecraft.world.World
-import net.minecraftforge.fluids.{FluidRegistry, FluidStack}
+import net.minecraftforge.fluids._
 
 // Thermal Fluid Generator
 
@@ -22,12 +22,13 @@ package object ThermalFluidGenerator
 	{
 		val content = Option(world.getTileEntity(x, y, z))
 		val meta = world.getBlockMetadata(x, y, z)
+		val block = world.getBlock(x, y, z)
 
-		val doReplace = if(lit && world.getBlock(x, y, z) == UnlitBlock)
-			world.setBlock(x, y, z, LitBlock)
-		else if(!lit && world.getBlock(x, y, z) == LitBlock)
-			world.setBlock(x, y, z, UnlitBlock)
-		else false
+		SourceGenerator.replacing = true
+		val doReplace = if(lit && block == UnlitBlock) world.setBlock(x, y, z, LitBlock)
+			else if(!lit && block == LitBlock) world.setBlock(x, y, z, UnlitBlock)
+			else false
+		SourceGenerator.replacing = false
 
 		if(doReplace)
 		{
@@ -54,6 +55,7 @@ package ThermalFluidGenerator
 	object StoreKeys
 	{
 		final val Tank = "fuelTank"
+		final val Injector = "injector"
 	}
 
 	// Blocks //
@@ -63,13 +65,15 @@ package ThermalFluidGenerator
 		override final def createNewTileEntity(world: World, meta: Int) = new TileEntity
 
 		// Block Interacts //
-		override final def onBlockActivated(world: World, x: Int, y: Int, z: Int, player: EntityPlayer, side: Int, xo: Float, yo: Float, zo: Float) =
-			(world.isRemote, world.getTileEntity(x, y, z).asInstanceOf[TileEntity]) match
-			{
-				case (true, _) => true
-				case (false, tile) => player.openGui(FMEntry, 0, world, x, y, z); true
-				case _ => false
-			}
+		override final def openContainerScreen(player: EntityPlayer, world: World, x: Int, y: Int, z: Int)
+		{
+			player.openGui(FMEntry, 0, world, x, y, z)
+		}
+		override final def breakContainer(world: World, x: Int, y: Int, z: Int, meta: Int){}
+
+		import net.minecraft.item.Item, java.util.Random
+		override final def getItem(world: World, x: Int, y: Int, z: Int) = Item.getItemFromBlock(UnlitBlock)
+		override final def getItemDropped(meta: Int, random: Random, fortune: Int) = Item.getItemFromBlock(UnlitBlock)
 	}
 	object UnlitBlock extends Block { this.setLightLevel(0.0f) }
 	object LitBlock extends Block
@@ -91,9 +95,9 @@ package ThermalFluidGenerator
 	import net.minecraft.nbt.NBTTagCompound
 	import net.minecraft.network.NetworkManager, net.minecraft.network.play.server.S35PacketUpdateTileEntity
 	import net.minecraftforge.common.util.ForgeDirection
-	import interfaces.ISourceGenerator, interops.smartcursor._
+	import interops.smartcursor._
 	@Optional.Interface(iface="com.cterm2.mcfm1710.interops.smartcursor.IInformationProvider", modid=SCModuleConnector.ID, striprefs=true)
-	final class TileEntity extends SourceGenerator.TileEntityBase with ISourceGenerator with IFluidHandler with IInformationProvider
+	final class TileEntity extends SourceGenerator.TileEntityBase with IFluidHandler with IInformationProvider
 	{
 		// Internal Data //
 		val tank = new Generics.FluidTank(16000)
@@ -101,39 +105,32 @@ package ThermalFluidGenerator
 		// Data Synchronization //
 		override def storeSpecificDataTo(tag: NBTTagCompound) =
 		{
+			super.storeSpecificDataTo(tag)
 			tank.synchronizeData foreach { tag.setTag(StoreKeys.Tank, _) }
 			tag
 		}
-		override def loadSpecificDataFrom(tag: NBTTagCompound) =
+		override def loadSpecificDataFrom(tag: NBTTagCompound)
 		{
+			super.loadSpecificDataFrom(tag)
 			tank.synchronizeDataFrom(Option(tag.getTag(StoreKeys.Tank).asInstanceOf[NBTTagCompound]))
-			tag
-		}
-		override def writeToNBT(tag: NBTTagCompound)
-		{
-			super.writeToNBT(tag)
-			this.storeSpecificDataTo(tag)
-		}
-		override def readFromNBT(tag: NBTTagCompound)
-		{
-			super.readFromNBT(tag)
-			this.loadSpecificDataFrom(tag)
-		}
-		override def getDescriptionPacket =
-			this.storeSpecificDataTo _ andThen (new S35PacketUpdateTileEntity(this.xCoord, this.yCoord, this.zCoord, 1, _)) apply new NBTTagCompound
-		override def onDataPacket(net: NetworkManager, packet: S35PacketUpdateTileEntity)
-		{
-			{ (_: S35PacketUpdateTileEntity).func_148857_g } andThen this.loadSpecificDataFrom apply packet
 		}
 
 		// Fluid Handling //
-		override def getTankInfo(from: ForgeDirection) = if(isPort(from)) Array(this.tank.getInfo) else null
-		override def canDrain(from: ForgeDirection, fluid: Fluid) = if(isPort(from)) this.tank canDrain fluid else false
-		override def canFill(from: ForgeDirection, fluid: Fluid) = if(isPort(from)) this.tank canFill fluid else false
-		override def fill(from: ForgeDirection, resource: FluidStack, perform: Boolean) = this.tank.fill(resource, perform)
+		override def getTankInfo(from: ForgeDirection) =
+			if(isPort(from)) Array(this.tank.getInfo) else this.injector map { _.getTankInfo(from) } getOrElse null
+		override def canDrain(from: ForgeDirection, fluid: Fluid) =
+			if(isPort(from)) this.tank canDrain fluid else this.injector exists { _.canDrain(from, fluid) }
+		override def canFill(from: ForgeDirection, fluid: Fluid) =
+			if(isPort(from)) this.tank canFill fluid else this.injector exists { _.canFill(from, fluid) }
+		override def fill(from: ForgeDirection, resource: FluidStack, perform: Boolean) =
+			if(this.injector exists { _.canFill(from, resource.getFluid) }) this.injector map { _.fill(from, resource, perform) } getOrElse 0
+			else this.tank.fill(resource, perform)
 		override def drain(from: ForgeDirection, resource: FluidStack, perform: Boolean) =
-			if(Option(resource) exists { this.tank canDrain _.getFluid }) this.tank.drain(resource.amount, perform) else null
-		override def drain(from: ForgeDirection, maxDrain: Int, perform: Boolean) = this.tank.drain(maxDrain, perform)
+			if(Option(resource) exists { this.tank canDrain _.getFluid }) this.tank.drain(resource.amount, perform) else
+			this.injector map { _.drain(from, resource, perform) } getOrElse null
+		override def drain(from: ForgeDirection, maxDrain: Int, perform: Boolean) =
+			if(this.injector exists { _.drain(from, maxDrain, false) != null }) this.injector map { _.drain(from, maxDrain, perform) } getOrElse null
+			else this.tank.drain(maxDrain, perform)
 		private def isPort(from: ForgeDirection) = from == ForgeDirection.UP || from == this.frontDirection.getOpposite
 
 		// Updating //
@@ -143,9 +140,10 @@ package ThermalFluidGenerator
 
 			if(!this.worldObj.inClientSide)
 			{
-				if(this.tank.getFluidOpt exists isValidFuel) Option(this.tank.drain(1, perform = true)) match
+				if(this.tank.getFluidOpt exists isValidFuel) Option(this.tank.drain(1, true)) match
 				{
 					case Some(_) =>
+						this.injector foreach { _.injectFluids(1) }
 						if(updateLitState(this.worldObj, this.xCoord, this.yCoord, this.zCoord, true)) this.markDirty()
 					case None =>
 						if(updateLitState(this.worldObj, this.xCoord, this.yCoord, this.zCoord, false)) this.markDirty()
@@ -158,10 +156,11 @@ package ThermalFluidGenerator
 		override def provideInformation(list: java.util.List[String])
 		{
 			list add s"Fluid Fuel amount: ${this.tank.getFluidAmount} mb"
+			this.injector foreach { _.provideInformation(list) }
 		}
 		// Send Description packet to client
 		override def forceSynchronize() =
-			updateLitState(this.worldObj, this.xCoord, this.yCoord, this.zCoord,  this.tank.getFluidOpt exists isValidFuel, true)
+			updateLitState(this.worldObj, this.xCoord, this.yCoord, this.zCoord, this.tank.getFluidOpt exists isValidFuel, true)
 	}
 
 	// Container and Gui //

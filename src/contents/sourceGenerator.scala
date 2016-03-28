@@ -2,27 +2,20 @@ package com.cterm2.mcfm1710
 
 import cpw.mods.fml.relauncher.{SideOnly, Side}
 
-package interfaces
-{
-    import net.minecraft.nbt.NBTTagCompound
-
-    trait ISourceGenerator
-    {
-        def storeSpecificDataTo(tag: NBTTagCompound): NBTTagCompound
-        def loadSpecificDataFrom(tag: NBTTagCompound): NBTTagCompound
-    }
-}
-
 package object SourceGenerator
 {
 	@SideOnly(Side.CLIENT)
 	def registerClient()
 	{
-		import cpw.mods.fml.client.registry.RenderingRegistry
+		import cpw.mods.fml.client.registry.{RenderingRegistry, ClientRegistry}
 
 		CommonValues.renderType = RenderingRegistry.getNextAvailableRenderId
 		RenderingRegistry.registerBlockHandler(CommonValues.renderType, BlockRenderer)
+		ClientRegistry.bindTileEntitySpecialRenderer(classOf[TileEntityBase], TileEntityRenderer)
 	}
+
+	// BreakBlock supressor
+	var replacing = false
 }
 
 // Source Generator Base Classes //
@@ -60,10 +53,15 @@ package SourceGenerator
     {
         var renderType: Int = 0
     }
+	object StoreKeys
+	{
+		final val FrontDirection = "front"
+		final val Injector = "injector"
+	}
     // Block //
     abstract class BlockBase(textureNameBase: String) extends BlockContainer(Material.iron) with interfaces.ITextureIndicesProvider
     {
-	    import utils.EntityLivingUtils._
+	    import utils.EntityLivingUtils._, utils.WorldExtensions._, net.minecraft.entity.player.EntityPlayer
 
         setHardness(1.0f)
 
@@ -81,8 +79,6 @@ package SourceGenerator
 	    }
 	    @SideOnly(Side.CLIENT)
 	    override final def getIcon(side: Int, meta: Int) = this.icons(side)
-	    @SideOnly(Side.CLIENT)
-	    override final def colorMultiplier(world: IBlockAccess, x: Int, y: Int, z: Int) = 0xe0e0e0    // little darker
 
         override final def getRenderType = CommonValues.renderType
 
@@ -90,8 +86,45 @@ package SourceGenerator
 	    override final def onBlockPlacedBy(world: World, x: Int, y: Int, z: Int, placer: EntityLivingBase, stack: ItemStack)
 	    {
 		    world.setBlockMetadataWithNotify(x, y, z, MetaValue(false, (placer.facingInt + 2) & 0x03), 3)
-			Option(world.getTileEntity(x, y, z).asInstanceOf[TileEntityBase]) foreach { _.setFacing((placer.facingInt + 2) & 0x03) }
+			Option(world.getTileEntity(x, y, z).asInstanceOf[TileEntityBase]) foreach { _.updateMetaInfo() }
 	    }
+		override final def onBlockActivated(world: World, x: Int, y: Int, z: Int, player: EntityPlayer, side: Int, xo: Float, yo: Float, zo: Float) =
+		{
+			if(!world.inClientSide)
+			{
+				val MetaValue(hasInfuser, facing) = world.getBlockMetadata(x, y, z)
+				if(!hasInfuser && (Option(player.inventory.getCurrentItem) exists { _.getItem == EnergyInjector.ItemModuled }))
+				{
+					// Server Side & Activated with Attachable Energy Injector & No infuser has attached
+					world.setBlockMetadataWithNotify(x, y, z, MetaValue(true, facing), 2)
+					Option(world.getTileEntity(x, y, z).asInstanceOf[TileEntityBase]) foreach { _.updateMetaInfo() }
+					player.useCurrentItem()
+					world.notifyBlockChange(x, y, z, this)
+					true
+				}
+				else
+				{
+					openContainerScreen(player, world, x, y, z)
+					true
+				}
+			}
+			else true
+		}
+	    override final def breakBlock(world: World, x: Int, y: Int, z: Int, block: net.minecraft.block.Block, meta: Int)
+		{
+			import utils.EntityExtensions._
+
+			if(!SourceGenerator.replacing)
+			{
+				val MetaValue(hasInfuser, _) = meta
+				if(hasInfuser) new ItemStack(EnergyInjector.BlockModuled, 1).dropAsEntityRandom(world, x, y, z)
+				this.breakContainer(world, x, y, z, meta)
+			}
+		}
+
+		// Custom Interacts //
+		def openContainerScreen(player: EntityPlayer, world: World, x: Int, y: Int, z: Int): Unit
+		def breakContainer(world: World, x: Int, y: Int, z: Int, meta: Int): Unit
     }
 
 	// TileEntity Commons //
@@ -99,16 +132,135 @@ package SourceGenerator
 	{
 		import net.minecraftforge.common.util.ForgeDirection
 
-		// Facing Settings //
-		protected var frontDirection = ForgeDirection.UNKNOWN
-		def setFacing(facing: Int)
+		// Internal Injector Entity //
+		private var _injector: Option[EnergyInjector.TEModuled] = None
+		def injector = this._injector
+		def injector_=(te: EnergyInjector.TEModuled)
 		{
-			this.frontDirection = facing match
+			this._injector = Option(te)
+		}
+
+		// Meta Settings //
+		def updateMetaInfo()
+		{
+			val MetaValue(hasInfuser, facing) = this.worldObj.getBlockMetadata(this.xCoord, this.yCoord, this.zCoord)
+			if(hasInfuser && this.injector.isEmpty) this.attachNewInjector()
+			else if(!hasInfuser && this.injector.isDefined) this.detachInjector()
+			this.facing = facing
+		}
+
+		// Facing Settings //
+		private var _frontDirection = ForgeDirection.UNKNOWN
+		private var facingInt = 0
+		def frontDirection = this._frontDirection
+		def facing_=(facing: Int)
+		{
+			this.facingInt = facing
+			this._frontDirection = facing match
 			{
 				case 0 => ForgeDirection.SOUTH
 				case 1 => ForgeDirection.WEST
 				case 2 => ForgeDirection.NORTH
 				case 3 => ForgeDirection.EAST
+			}
+			this.injector foreach { _.dir = this.frontDirection }
+		}
+		def facing = this.facingInt
+		private def attachNewInjector()
+		{
+			this._injector = Some(new EnergyInjector.TEModuled)
+			this.injector foreach
+			{ x =>
+				x.dir = this.frontDirection
+				// share objects
+				x.setWorldObj(this.worldObj)
+				x.xCoord = this.xCoord
+				x.yCoord = this.yCoord
+				x.zCoord = this.zCoord
+			}
+			// Update Block for Re-rendering
+			this.worldObj.markBlockForUpdate(this.xCoord, this.yCoord, this.zCoord)
+		}
+		private def detachInjector()
+		{
+			this._injector = None
+			this.worldObj.markBlockForUpdate(this.xCoord, this.yCoord, this.zCoord)
+		}
+
+		// Data Synchronizing //
+		import net.minecraft.nbt.NBTTagCompound, utils.ActiveNBTRecord._
+        def storeSpecificDataTo(tag: NBTTagCompound) =
+		{
+			tag(StoreKeys.FrontDirection) = this.facingInt.asInstanceOf[Byte]
+			this.injector map { _.storeSpecificDataTo(new NBTTagCompound) } foreach { tag(StoreKeys.Injector) = _ }
+			tag
+		}
+        def loadSpecificDataFrom(tag: NBTTagCompound)
+		{
+			this.facing = tag[Byte](StoreKeys.FrontDirection) map { _.toInt } getOrElse 0
+			this._injector = tag[NBTTagCompound](StoreKeys.Injector) map
+			{ t =>
+				val te = new EnergyInjector.TEModuled
+				te.loadSpecificDataFrom(t)
+				// share objects
+				te.setWorldObj(this.worldObj)
+				te.xCoord = this.xCoord
+				te.yCoord = this.yCoord
+				te.zCoord = this.zCoord
+				te.dir = this.frontDirection
+				te
+			}
+		}
+		import net.minecraft.nbt.NBTTagCompound
+		override def writeToNBT(tag: NBTTagCompound)
+		{
+			super.writeToNBT(tag)
+			this.storeSpecificDataTo(tag)
+		}
+		override def readFromNBT(tag: NBTTagCompound)
+		{
+			super.readFromNBT(tag)
+			this.loadSpecificDataFrom(tag)
+		}
+		import net.minecraft.network.NetworkManager, net.minecraft.network.play.server.S35PacketUpdateTileEntity
+		override def getDescriptionPacket =
+			this.storeSpecificDataTo _ andThen (new S35PacketUpdateTileEntity(this.xCoord, this.yCoord, this.zCoord, 1, _)) apply new NBTTagCompound
+		override def onDataPacket(net: NetworkManager, packet: S35PacketUpdateTileEntity)
+		{
+			((_: S35PacketUpdateTileEntity).func_148857_g) andThen this.loadSpecificDataFrom apply packet
+		}
+
+		override def validate()
+		{
+			super.validate()
+			this.injector foreach
+			{ t =>
+				t.validate()
+				// share objects
+				t.setWorldObj(this.worldObj)
+				t.xCoord = this.xCoord
+				t.yCoord = this.yCoord
+				t.zCoord = this.zCoord
+				t.dir = this.frontDirection
+			}
+		}
+	}
+
+	// TileEntity Renderer //
+	import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer
+	@SideOnly(Side.CLIENT)
+	object TileEntityRenderer extends TileEntitySpecialRenderer
+	{
+		import net.minecraft.tileentity.TileEntity
+
+		override def renderTileEntityAt(entity: TileEntity, x: Double, y: Double, z: Double, f: Float)
+		{
+			entity match
+			{
+				case t: TileEntityBase => t.injector foreach
+				{
+					EnergyInjector.TileEntityRenderer.renderContent(_, x, y, z, EnergyInjector.FluidLimits.Module, 0.5f)
+				}
 			}
 		}
 	}
@@ -181,16 +333,31 @@ package SourceGenerator
 			val MetaValue(hasInjector, facing) = world.getBlockMetadata(x, y, z)
 			val rp = new utils.RenderPipeline(renderer, block.asInstanceOf[Block with interfaces.ITextureIndicesProvider], x, y, z, facing)
 
-		    // render -Y Faces(Pole under and body under)
-		    rp.renderFaceYNeg(0.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f)
-		    for(xo <- Seq(0.0f, 7.0f / 8.0f); zo <- Seq(0.0f, 7.0f / 8.0f))
-			    rp.renderFaceYNeg(xo, 0.0f, zo, xo + 1.0f / 8.0f, 0.5f, zo + 1.0f / 8.0f)
-		    // render +Y Faces(body top)
-		    rp.renderFaceYPos(0.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f)
-		    // render 4 Faces(body and pole back)
-		    rp.render4Faces(0.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f)
-		    for(xo <- Seq(0.0f, 7.0f / 8.0f); zo <- Seq(0.0f, 7.0f / 8.0f))
-			    rp.render4Faces(xo, 0.0f, zo, xo + 1.0f / 8.0f, 0.5f, zo + 1.0f / 8.0f)
+			if(hasInjector)
+			{
+				// Full body
+				rp.renderFaceYPos(0.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f)
+				rp.render4Faces(0.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f)
+				val rp2 = new utils.RenderPipeline(renderer, EnergyInjector.BlockModuled, x, y, z, facing)
+				rp2.render4Faces(0.0f, 0.0f, 0.0f, 1.0f, 0.5f, 1.0f)
+				rp2.renderFaceYNeg(0.0f, 1.0f / 256.0f, 0.0f, 1.0f, 0.5f, 1.0f)
+				EnergyInjector.BlockRenderer.renderHull(rp2, renderer, true)
+				EnergyInjector.BlockRenderer.renderSeparator(rp2, facing)
+				rp2.close()
+			}
+			else
+			{
+			    // render -Y Faces(Pole under and body under)
+			    rp.renderFaceYNeg(0.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f)
+			    for(xo <- Seq(0.0f, 7.0f / 8.0f); zo <- Seq(0.0f, 7.0f / 8.0f))
+				    rp.renderFaceYNeg(xo, 0.0f, zo, xo + 1.0f / 8.0f, 0.5f, zo + 1.0f / 8.0f)
+			    // render +Y Faces(body top)
+			    rp.renderFaceYPos(0.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f)
+			    // render 4 Faces(body and pole back)
+			    rp.render4Faces(0.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f)
+			    for(xo <- Seq(0.0f, 7.0f / 8.0f); zo <- Seq(0.0f, 7.0f / 8.0f))
+				    rp.render4Faces(xo, 0.0f, zo, xo + 1.0f / 8.0f, 0.5f, zo + 1.0f / 8.0f)
+			}
 			rp.close()
             true
         }
