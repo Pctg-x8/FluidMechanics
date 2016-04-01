@@ -8,9 +8,9 @@ import net.minecraftforge.fluids._
 
 package object ThermalFluidGenerator
 {
-	def register(ctab: net.minecraft.creativetab.CreativeTabs)
+	def register()
 	{
-		ContentRegistry register UnlitBlock.setCreativeTab(ctab) as "sourceGenerator.thermalFluid"
+		ContentRegistry register UnlitBlock.setCreativeTab(FluidTab) as "sourceGenerator.thermalFluid"
 		ContentRegistry register LitBlock as "sourceGenerator.thermalFluid.lit"
 		ContentRegistry register classOf[TileEntity] as "TEThermalFluidGenerator"
 	}

@@ -4,9 +4,9 @@ import cpw.mods.fml.relauncher.{Side, SideOnly}
 
 package object AssemblyTable
 {
-	def register(ctab: net.minecraft.creativetab.CreativeTabs)
+	def register()
 	{
-		ContentRegistry register Item.setCreativeTab(ctab) as "asmTable"
+		ContentRegistry register Item.setCreativeTab(FluidTab) as "asmTable"
 		ContentRegistry register Block as "assemblyTable_part"
 		ContentRegistry register BlockTopPart as "assemblyTable.top"
 		ContentRegistry register classOf[TileEntity] as "TEAssemblyTable"

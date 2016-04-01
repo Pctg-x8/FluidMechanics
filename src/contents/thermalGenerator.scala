@@ -6,12 +6,11 @@ import net.minecraft.world.World
 
 package object ThermalGenerator
 {
-	def register(ctab: net.minecraft.creativetab.CreativeTabs) =
+	def register()
 	{
-		ContentRegistry register UnlitBlock.setCreativeTab(ctab) as "sourceGenerator.thermal"
+		ContentRegistry register UnlitBlock.setCreativeTab(FluidTab) as "sourceGenerator.thermal"
 		ContentRegistry register LitBlock as "sourceGenerator.thermal.lit"
 		ContentRegistry register classOf[TileEntity] as "TEThermalGenerator"
-		ctab
 	}
 
 	def setBlockLitState(world: World, x: Int, y: Int, z: Int, lit: Boolean, forceUpdate: Boolean = false) =

@@ -23,16 +23,11 @@ object FMEntry
 	final val Name = "Fluid Mechanics"
 	final val Version = "1.0-alpha"
 
-	val ctab = new CreativeTabs("tabFluidMechanics")
-	{
-		@SideOnly(Side.CLIENT)
-		override def getTabIconItem() = Item.getItemFromBlock(VanillaBlocks.anvil)
-	}
 	@SidedProxy(clientSide="com.cterm2.mcfm1710.FMEntry$ClientProxy", serverSide="com.cterm2.mcfm1710.FMEntry$ServerProxy")
 	var proxy: IProxy = null
 
 	@EventHandler
-	def preInit(e: FMLPreInitializationEvent) =
+	def preInit(e: FMLPreInitializationEvent)
 	{
 		// Enable Trace Logging
 		val context = LogManager.getContext(false).asInstanceOf[LoggerContext]
@@ -45,13 +40,14 @@ object FMEntry
 		logger.info(s"$Name version $Version.")
 	}
 	@EventHandler
-	def init(e: FMLInitializationEvent) =
+	def init(e: FMLInitializationEvent)
 	{
 		Fluids.init()
-		AssemblyTable register this.ctab
-		EnergyInjector register this.ctab
-		ThermalGenerator register this.ctab
-		ThermalFluidGenerator register this.ctab
+		AssemblyTable.register()
+		EnergyInjector.register()
+		ThermalGenerator.register()
+		ThermalFluidGenerator.register()
+		WoodPipe.register()
 
 		this.proxy.registerRenderers()
 
@@ -66,26 +62,20 @@ object FMEntry
 	@SideOnly(Side.CLIENT)
 	final class ClientProxy extends IProxy
 	{
-		import cpw.mods.fml.client.registry.{RenderingRegistry, ISimpleBlockRenderingHandler}
-
-		override def registerRenderers() =
+		override def registerRenderers()
 		{
 			AssemblyTable.registerClient
 			EnergyInjector.registerClient
 			SourceGenerator.registerClient
 		}
-
-		@inline
-		private def registerBlockRenderer(render: ISimpleBlockRenderingHandler) =
-		{
-			val id = RenderingRegistry.getNextAvailableRenderId
-			RenderingRegistry.registerBlockHandler(id, render)
-			id
-		}
 	}
 	@SideOnly(Side.SERVER)
 	final class ServerProxy extends IProxy
-	{
+}
 
-	}
+// Creative Tab for Mod
+object FluidTab extends CreativeTabs("tabFluidMechanics")
+{
+	@SideOnly(Side.CLIENT)
+	override def getTabIconItem() = Item.getItemFromBlock(VanillaBlocks.anvil)
 }

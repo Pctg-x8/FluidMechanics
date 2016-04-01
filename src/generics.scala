@@ -16,8 +16,10 @@ package Generics
 		override def getFluid = this.stack getOrElse null
 		override def getFluidAmount = this.stack map (_.amount) getOrElse 0
 		def getFluidOpt = this.stack
-		def canFill(input: Fluid) = this.stack map { _.getFluid == input } getOrElse true
-		def canDrain(input: Fluid) = this.stack map { _.getFluid == input } getOrElse false
+		def canFill(input: Fluid) = !(this.stack exists { _.getFluid != input })
+		def canDrain(input: Fluid) = this.stack exists { _.getFluid == input }
+		def canFill(input: FluidStack): Boolean = Option(input) exists this.canFill
+		def canDrain(input: FluidStack): Boolean = Option(input) exists this.canDrain
 		def setAmount(amount: Int) = if(amount == 0) this.stack = None else this.stack foreach
 		{
 			_.amount = amount

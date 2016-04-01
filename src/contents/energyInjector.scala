@@ -15,10 +15,10 @@ package interfaces
 
 package object EnergyInjector
 {
-	def register(ctab: net.minecraft.creativetab.CreativeTabs)
+	def register()
 	{
-		ContentRegistry register BlockModuled.setCreativeTab(ctab) as "energyInjector.attachable"
-		ContentRegistry register BlockStandalone.setCreativeTab(ctab) as "energyInjector.standalone"
+		ContentRegistry register BlockModuled.setCreativeTab(FluidTab) as "energyInjector.attachable"
+		ContentRegistry register BlockStandalone.setCreativeTab(FluidTab) as "energyInjector.standalone"
 		ContentRegistry register classOf[TEModuled] as "TEEnergyInjectorModuled"
 		ContentRegistry register classOf[TEStandalone] as "TEEnergyInjector"
 	}
@@ -226,7 +226,7 @@ package EnergyInjector
     		}
     	}
     	private lazy val waterTank = new RestrictedFluidTank(FluidRegistry.WATER)
-    	private lazy val energeticTank = new RestrictedFluidTank(Fluids.energeticFluid)
+    	private lazy val energeticTank = new RestrictedFluidTank(EnergeticFluid.Fluid)
     	private final def getTank(from: ForgeDirection) = from match
     	{
     		case ForgeDirection.EAST if dir == ForgeDirection.NORTH => Some(this.waterTank)
