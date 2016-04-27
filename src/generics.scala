@@ -18,8 +18,9 @@ package Generics
 		def getFluidOpt = this.stack
 		def canFill(input: Fluid) = !(this.stack exists { _.getFluid != input })
 		def canDrain(input: Fluid) = this.stack exists { _.getFluid == input }
-		def canFill(input: FluidStack): Boolean = Option(input) exists this.canFill
-		def canDrain(input: FluidStack): Boolean = Option(input) exists this.canDrain
+		def canFill(input: FluidStack): Boolean = Option(input) map { _.getFluid } exists this.canFill
+		def canDrain(input: FluidStack): Boolean = Option(input) map { _.getFluid } exists this.canDrain
+		def canDrain(): Boolean = this.stack.isDefined
 		def setAmount(amount: Int) = if(amount == 0) this.stack = None else this.stack foreach
 		{
 			_.amount = amount
@@ -61,10 +62,12 @@ package Generics
 
 		// Data Synchronizations //
 		def synchronizeData = this.stack map { x => { val tag = new NBTTagCompound; x.writeToNBT(tag); tag } }
-		def synchronizeDataFrom(tag: Option[NBTTagCompound])
+		def synchronizeData_=(tag: Option[NBTTagCompound])
 		{
 			this.stack = tag map FluidStack.loadFluidStackFromNBT
 		}
+		@deprecated("For old sources", "1.0")
+		def synchronizeDataFrom(tag: Option[NBTTagCompound]) { this.synchronizeData = tag }
 	}
 
 	// Generic Container supports shift-clicking and player slot implementation

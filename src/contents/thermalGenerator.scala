@@ -112,17 +112,17 @@ package ThermalGenerator
 		var fullBurnTime = 0
 
 		// Data Synchronization //
-        override def storeSpecificDataTo(tag: NBTTagCompound) =
+        override def storePacketData(tag: NBTTagCompound) =
         {
-			super.storeSpecificDataTo(tag)
+			super.storePacketData(tag)
 			tag.setShort(StoreKeys.BurnTime, this.burnTimeLast.asInstanceOf[Short])
 			tag.setShort(StoreKeys.FullBurnTime, this.fullBurnTime.asInstanceOf[Short])
 			this.slotItem map { x => val tag = new NBTTagCompound; x.writeToNBT(tag); tag } foreach { tag.setTag(StoreKeys.FuelStack, _) }
 			tag
         }
-        override def loadSpecificDataFrom(tag: NBTTagCompound)
+        override def loadPacketData(tag: NBTTagCompound)
         {
-			super.loadSpecificDataFrom(tag)
+			super.loadPacketData(tag)
 			this.burnTimeLast = Option(tag.getShort(StoreKeys.BurnTime).asInstanceOf[Int]) getOrElse 0
 			this.fullBurnTime = Option(tag.getShort(StoreKeys.FullBurnTime).asInstanceOf[Int]) getOrElse 0
 			this.slotItem = Option(tag.getTag(StoreKeys.FuelStack).asInstanceOf[NBTTagCompound]) map ItemStack.loadItemStackFromNBT

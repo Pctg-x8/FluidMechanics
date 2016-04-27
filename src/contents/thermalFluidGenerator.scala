@@ -51,6 +51,7 @@ package ThermalFluidGenerator
 	import net.minecraft.client.renderer.texture.IIconRegister
 	import net.minecraft.world.World
 	import net.minecraft.entity.player.EntityPlayer
+	import utils.ActiveNBTRecord._
 
 	object StoreKeys
 	{
@@ -103,16 +104,16 @@ package ThermalFluidGenerator
 		val tank = new Generics.FluidTank(16000)
 
 		// Data Synchronization //
-		override def storeSpecificDataTo(tag: NBTTagCompound) =
+		override def storePacketData(tag: NBTTagCompound) =
 		{
-			super.storeSpecificDataTo(tag)
-			tank.synchronizeData foreach { tag.setTag(StoreKeys.Tank, _) }
+			super.storePacketData(tag)
+			tank.synchronizeData foreach { tag(StoreKeys.Tank) = _ }
 			tag
 		}
-		override def loadSpecificDataFrom(tag: NBTTagCompound)
+		override def loadPacketData(tag: NBTTagCompound)
 		{
-			super.loadSpecificDataFrom(tag)
-			tank.synchronizeDataFrom(Option(tag.getTag(StoreKeys.Tank).asInstanceOf[NBTTagCompound]))
+			super.loadPacketData(tag)
+			tank.synchronizeData = tag[NBTTagCompound](StoreKeys.Tank)
 		}
 
 		// Fluid Handling //

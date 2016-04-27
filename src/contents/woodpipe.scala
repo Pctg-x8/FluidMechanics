@@ -23,6 +23,14 @@ package WoodPipe
 	import cpw.mods.fml.common.Optional
 	import net.minecraftforge.fluids._, net.minecraftforge.common.util.ForgeDirection
 	import interops.smartcursor._
+	import net.minecraft.nbt.NBTTagCompound
+	import utils.ActiveNBTRecord._, utils.LocalTranslationUtils._
+	import com.cterm2.mcfm1710.interops.smartcursor._
+
+	object StoreKeys
+	{
+		final val Tank = "tpbuffer"
+	}
 
 	object Block extends block.BlockContainer(Material.wood)
 	{
@@ -39,13 +47,18 @@ package WoodPipe
 		// Shape Configurations //
 		override def setBlockBoundsBasedOnState(world: IBlockAccess, x: Int, y: Int, z: Int)
 		{
+			def foundTankInfos(from: ForgeDirection) =
+				(x: TileEntity) => (Option(x.asInstanceOf[IFluidHandler]) flatMap {
+					(x: IFluidHandler) => Option(x.getTankInfo(from))
+				} exists { _.nonEmpty })
+
 			val (leftConnected, rightConnected, topConnected, bottomConnected, frontConnected, backConnected) =
-				(Option(world.getTileEntity(x + 1, y, z)) exists { _.isInstanceOf[IFluidHandler] },
-				Option(world.getTileEntity(x - 1, y, z)) exists { _.isInstanceOf[IFluidHandler] },
-				Option(world.getTileEntity(x, y + 1, z)) exists { _.isInstanceOf[IFluidHandler] },
-				Option(world.getTileEntity(x, y - 1, z)) exists { _.isInstanceOf[IFluidHandler] },
-				Option(world.getTileEntity(x, y, z + 1)) exists { _.isInstanceOf[IFluidHandler] },
-				Option(world.getTileEntity(x, y, z - 1)) exists { _.isInstanceOf[IFluidHandler] })
+				(Option(world.getTileEntity(x + 1, y, z)) exists foundTankInfos(ForgeDirection.WEST),
+				Option(world.getTileEntity(x - 1, y, z)) exists foundTankInfos(ForgeDirection.EAST),
+				Option(world.getTileEntity(x, y + 1, z)) exists foundTankInfos(ForgeDirection.DOWN),
+				Option(world.getTileEntity(x, y - 1, z)) exists foundTankInfos(ForgeDirection.UP),
+				Option(world.getTileEntity(x, y, z + 1)) exists foundTankInfos(ForgeDirection.NORTH),
+				Option(world.getTileEntity(x, y, z - 1)) exists foundTankInfos(ForgeDirection.SOUTH))
 			def getExtentNeg(connected: Boolean) = if(connected) 0.0f else (1.0f - pipeThickness) * 0.5f
 			def getExtentPos(connected: Boolean) = if(connected) 1.0f else (1.0f + pipeThickness) * 0.5f
 
@@ -60,26 +73,45 @@ package WoodPipe
 
 		override def createNewTileEntity(world: World, meta: Int) = new TEPipe
 	}
-	@Optional.Interface(iface="com.cterm2.mcfm1710.interops.smartcursor.IInformationProvider", modid=SCModuleConnector.ID, striprefs = true)
-	class TEPipe extends TileEntity with IInformationProvider with IFluidHandler
+	@Optional.Interface(iface="com.cterm2.mcfm1710.interops.smartcursor.IInformationProvider", modid=SCModuleConnector.ID, striprefs=true)
+	class TEPipe extends base.NetworkTileEntity with IFluidHandler with IInformationProvider
 	{
-		// Fluid Handler //
-		private val internal = new Generics.FluidTank(1000)
-		override def getTankInfo(from: ForgeDirection) = Array(internal.getInfo)
-		override def canDrain(from: ForgeDirection, fluid: Fluid) = internal canDrain fluid
-		override def canFill(from: ForgeDirection, fluid: Fluid) = internal canFill fluid
-		override def drain(from: ForgeDirection, maxDrain: Int, perform: Boolean) =
-			internal.drain(maxDrain, perform)
-		override def drain(from: ForgeDirection, resource: FluidStack, perform: Boolean) =
-			if(Option(resource) exists { internal canDrain _ }) internal.drain(resource.amount, perform) else null
-		override def fill(from: ForgeDirection, resource: FluidStack, perform: Boolean) =
-			internal.fill(resource, perform)
-
-		// Information Provider //
-		override def provideInformation(list: java.util.List[String])
+		// Data Synchronize //
+		override def storePacketData(tag: NBTTagCompound) =
 		{
-			list.add(s"Pipe Internal: ${this.internal.getFluidAmount} mb")
+			this.tank.synchronizeData foreach { tag(StoreKeys.Tank) = _ }
+			tag
 		}
-		override def forceSynchronize() = ()
+		override def loadPacketData(tag: NBTTagCompound)
+		{
+			this.tank.synchronizeData = tag[NBTTagCompound](StoreKeys.Tank)
+		}
+
+		// FluidTank //
+		private val tank = new Generics.FluidTank(1000)
+		override def getTankInfo(from: ForgeDirection) = Array(this.tank.getInfo)
+		override def canFill(from: ForgeDirection, fluid: Fluid) = this.tank canFill fluid
+		override def canDrain(from: ForgeDirection, fluid: Fluid) = this.tank canDrain fluid
+		override def fill(from: ForgeDirection, resource: FluidStack, perform: Boolean) =
+			if(this.tank canFill resource) this.tank.fill(resource, perform) else 0
+		override def drain(from: ForgeDirection, resource: FluidStack, perform: Boolean) =
+			if(this.tank canDrain resource) this.tank.drain(resource.amount, perform) else null
+		override def drain(from: ForgeDirection, maxDrain: Int, perform: Boolean) =
+			if(this.tank.canDrain) this.tank.drain(maxDrain, perform) else null
+
+		// Information Proivider //
+		override final def provideInformation(list: java.util.List[String])
+		{
+			val fluidname = Option(this.tank.getFluid) map { _.getFluid } map { x => t"${x.getUnlocalizedName}" } getOrElse "None"
+			val amount = this.tank.getFluidAmount
+			val cap = this.tank.getCapacity
+
+			list add s"Transporting ${fluidname}"
+			list add s"Pending ${amount}/${cap} mb"
+		}
+		override final def forceSynchronize()
+		{
+			this.worldObj.markBlockForUpdate(this.xCoord, this.yCoord, this.zCoord)
+		}
 	}
 }

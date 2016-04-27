@@ -128,7 +128,7 @@ package SourceGenerator
     }
 
 	// TileEntity Commons //
-	abstract class TileEntityBase extends net.minecraft.tileentity.TileEntity
+	abstract class TileEntityBase extends base.NetworkTileEntity
 	{
 		import net.minecraftforge.common.util.ForgeDirection
 
@@ -189,13 +189,13 @@ package SourceGenerator
 
 		// Data Synchronizing //
 		import net.minecraft.nbt.NBTTagCompound, utils.ActiveNBTRecord._
-        def storeSpecificDataTo(tag: NBTTagCompound) =
+        override def storePacketData(tag: NBTTagCompound) =
 		{
 			tag(StoreKeys.FrontDirection) = this.facingInt.asInstanceOf[Byte]
 			this.injector map { _.storeSpecificDataTo(new NBTTagCompound) } foreach { tag(StoreKeys.Injector) = _ }
 			tag
 		}
-        def loadSpecificDataFrom(tag: NBTTagCompound)
+        override def loadPacketData(tag: NBTTagCompound)
 		{
 			this.facing = tag[Byte](StoreKeys.FrontDirection) map { _.toInt } getOrElse 0
 			this._injector = tag[NBTTagCompound](StoreKeys.Injector) map
@@ -210,24 +210,6 @@ package SourceGenerator
 				te.dir = this.frontDirection
 				te
 			}
-		}
-		import net.minecraft.nbt.NBTTagCompound
-		override def writeToNBT(tag: NBTTagCompound)
-		{
-			super.writeToNBT(tag)
-			this.storeSpecificDataTo(tag)
-		}
-		override def readFromNBT(tag: NBTTagCompound)
-		{
-			super.readFromNBT(tag)
-			this.loadSpecificDataFrom(tag)
-		}
-		import net.minecraft.network.NetworkManager, net.minecraft.network.play.server.S35PacketUpdateTileEntity
-		override def getDescriptionPacket =
-			this.storeSpecificDataTo _ andThen (new S35PacketUpdateTileEntity(this.xCoord, this.yCoord, this.zCoord, 1, _)) apply new NBTTagCompound
-		override def onDataPacket(net: NetworkManager, packet: S35PacketUpdateTileEntity)
-		{
-			((_: S35PacketUpdateTileEntity).func_148857_g) andThen this.loadSpecificDataFrom apply packet
 		}
 
 		override def validate()

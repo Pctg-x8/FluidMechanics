@@ -36,7 +36,7 @@ libraryDependencies ++= Seq(
 	"net.minecraft" % "launchwrapper" % "1.12",
 	"net.sf.trove4j" % "trove4j" % "3.0.3",
 	"lzma" % "lzma" % "0.0.1",
-	"com.google.code.findbugs" % "jsr305" % "1.3.+",
+	// "com.google.code.findbugs" % "jsr305" % "1.3.+",
 	"org.scalactic" %% "scalactic" % "2.2.6",
 	"org.scalatest" %% "scalatest" % "2.2.6"
 )
